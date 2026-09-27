@@ -271,7 +271,9 @@ $("remark").onclick=()=>{const a=$("audio");marks=[];step=0;update();a.currentTi
   $("recStatus").textContent="Hör zu und drück bei jeder neuen Zeile die Leertaste.";a.onended=()=>{if(mode==="mark")finishMark()}};
 function finishMark(){mode="idle";$("stage").classList.remove("rec");$("audio").pause();$("recStatus").textContent=`${marks.length} Marker gesetzt. Klick auf „Abspielen“.`}
 $("dl").onclick=async()=>{if(!audioBlob)return;const ext=(audioBlob.type.includes("mp4")?"m4a":audioBlob.type.includes("ogg")?"ogg":"webm");
-  const l=document.createElement("a");l.href=URL.createObjectURL(audioBlob);l.download="voiceover."+ext;l.click()};
+  const dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null;
+  if(dl){try{await dl.save({filename:"voiceover."+ext,data:audioBlob})}catch(e){$("recStatus").textContent="Speichern abgebrochen."}}
+  else{const l=document.createElement("a");l.href=URL.createObjectURL(audioBlob);l.download="voiceover."+ext;l.click()}};
 
 /* ---- manual edit ---- */
 const F=[["iBrand","brand"],["iTitle","title"],["iHead","head"],["iRows","rows"],["iFoot","foot"]];
