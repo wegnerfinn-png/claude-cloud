@@ -309,6 +309,16 @@ function pickMime(){
 }
 let videoBlob=null;
 const autoBusyIds=["autoVideo","testVoice","loadTpl","next","prev","reset"];
+function explainDisplayMediaError(e){
+  if(window.self!==window.top)return "Diese Seite läuft in einem eingebetteten Fenster (z. B. der Claude-Ansicht). Öffne sie direkt über ihre eigene Adresse (z. B. reveal.tablenine.de), eingebettet blockiert der Browser die Bildschirmaufnahme.";
+  if(!window.isSecureContext)return "Bildschirmaufnahme geht nur über eine sichere Verbindung. Ruf die Seite über https:// auf, nicht über http:// oder eine reine IP-Adresse.";
+  const n=e&&e.name;
+  if(n==="NotAllowedError")return "Der Browser hat die Aufnahme verweigert. Im Auswahlfenster musst du einen Tab/Bildschirm anklicken und mit „Teilen“ bestätigen statt „Abbrechen“. Prüf auch, ob dein System dem Browser Bildschirmaufnahme erlaubt (z. B. macOS: Systemeinstellungen → Datenschutz → Bildschirmaufnahme).";
+  if(n==="NotFoundError")return "Es wurde keine Aufnahmequelle gefunden.";
+  if(n==="NotSupportedError"||n==="TypeError")return "Dieser Browser unterstützt die automatische Aufnahme nicht (am besten Chrome oder Edge auf dem Desktop nutzen).";
+  if(n==="SecurityError")return "Der Browser hat die Bildschirmaufnahme aus Sicherheitsgründen blockiert.";
+  return "Aufnahme abgebrochen oder vom Browser nicht erlaubt"+(n?` (${n}${e.message?": "+e.message:""})`:"")+".";
+}
 $("autoVideo").onclick=async()=>{
   if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){$("autoStatus").textContent="Dieser Browser kann keine automatische Bildschirmaufnahme. Nutz die manuelle Aufnahme unten.";return}
   videoBlob=null;$("saveVideo").disabled=true;$("preview").style.display="none";
@@ -316,7 +326,7 @@ $("autoVideo").onclick=async()=>{
   $("autoStatus").textContent="Bitte im Auswahlfenster diesen Tab wählen und „Audio teilen“ anhaken …";
   let stream;
   try{stream=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:"browser"},audio:true,preferCurrentTab:true})}
-  catch(e){$("autoStatus").textContent="Aufnahme abgebrochen oder vom Browser nicht erlaubt.";autoBusyIds.forEach(id=>$(id).disabled=false);return}
+  catch(e){$("autoStatus").textContent=explainDisplayMediaError(e);autoBusyIds.forEach(id=>$(id).disabled=false);return}
   const hasAudio=stream.getAudioTracks().length>0;
   step=0;update();
   const mime=pickMime();
