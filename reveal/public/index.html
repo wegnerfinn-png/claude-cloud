@@ -82,58 +82,69 @@ details summary{cursor:pointer;font-size:13px;color:var(--muted)}
 
 <div class="panel">
   <div class="box">
-    <h2><em>1</em>Tabelle und Voiceover-Skript</h2>
-    <label>Vorlage laden</label>
-    <div class="row"><select id="tpl" style="flex:1;width:auto"></select><button class="ghost" id="loadTpl">Laden</button></div>
-    <label>Oder neues Thema mit Claude</label>
-    <input id="topic" placeholder="z. B. „Kniebeugen nach Körpergewicht“, „Schlaf → Muskelaufbau“">
-    <div class="row"><button id="gen">Neues Blatt erstellen</button></div>
-    <details><summary>Tabelle bearbeiten</summary>
+    <h2><em>1</em>Thema wählen</h2>
+    <label>Vorlage</label>
+    <div class="row"><select id="tpl" style="flex:1;width:auto"></select><button id="loadTpl">Laden</button></div>
+    <p class="hint">Tabelle und Voiceover-Skript sind für jede Vorlage schon fertig — kein Warten, kein Limit.</p>
+    <details><summary>Eigenes Thema schreiben lassen / Tabelle bearbeiten</summary>
+      <label>Neues Thema mit Claude (optional, kann kurz limitiert sein)</label>
+      <input id="topic" placeholder="z. B. „Kniebeugen nach Körpergewicht“">
+      <div class="row"><button class="ghost" id="gen">Neues Blatt erstellen</button></div>
+      <p class="status" id="genStatus"></p>
       <label>Markenzeile oben</label><input id="iBrand">
       <label>Titel (Umbruch mit |)</label><input id="iTitle">
       <label>Spaltenköpfe (links | rechts)</label><input id="iHead">
       <label>Zeilen: links | rechts</label><textarea id="iRows" rows="10"></textarea>
       <label>Footer / CTA</label><input id="iFoot">
+      <label>Voiceover: eine Zeile pro Tabellenzeile</label>
+      <textarea id="iVo" rows="10"></textarea>
+      <div class="row"><select id="voLang" style="width:auto"><option value="en">Englisch</option><option value="de">Deutsch</option></select><button class="ghost" id="autoVo">Skript neu aus Tabelle erzeugen</button></div>
+      <ol class="lines" id="lines" hidden></ol>
     </details>
-    <label>Voiceover: eine Zeile pro Tabellenzeile</label>
-    <textarea id="iVo" rows="10"></textarea>
-    <div class="row"><select id="voLang" style="width:auto"><option value="en">Englisch</option><option value="de">Deutsch</option></select><button class="ghost" id="autoVo">Skript aus Tabelle erzeugen</button></div>
-    <p class="status" id="genStatus"></p>
-    <ol class="lines" id="lines" hidden></ol>
   </div>
 
   <div class="box">
-    <h2><em>2</em>Voiceover aufnehmen</h2>
-    <p class="hint">Start drücken, dann den Text im Teleprompter lesen. Vor jeder Zeile einmal <b>Leertaste</b> drücken oder aufs Bild tippen. Dann rutscht die Abdeckung weiter und du liest die angezeigte Zeile. Die Zeitpunkte werden gespeichert.</p>
-    <div class="row">
-      <button class="red" id="rec">● Aufnahme starten</button>
-      <label style="display:inline-flex;gap:6px;align-items:center"><button class="ghost" id="upBtn" type="button">Audio hochladen</button></label>
-      <input type="file" id="upload" accept="audio/*" hidden>
-    </div>
-    <p class="status" id="recStatus"></p>
+    <h2><em>2</em>Video automatisch erstellen</h2>
+    <p class="hint">Ein Klick: dein Gerät liest das Voiceover laut vor (Sprachausgabe deines Browsers, läuft lokal ohne Server) und nimmt dabei Bild und Ton auf. Die Abdeckung rutscht automatisch im Takt der Stimme weiter. Im Auswahlfenster von Chrome/Edge <b>diesen Tab</b> wählen und <b>„Audio teilen“</b> anhaken — das fragt der Browser aus Sicherheitsgründen einmal ab, das kann ich nicht überspringen.</p>
+    <label>Stimme</label>
+    <div class="row"><select id="voice" style="flex:1;width:auto"></select><button class="ghost" id="testVoice">🔊 Testen</button></div>
+    <label>Sprechtempo <span id="rateVal">1.00×</span></label>
+    <input type="range" id="rate" min="0.7" max="1.3" step="0.05" value="1">
+    <div class="row"><button class="red" id="autoVideo">● Video automatisch erstellen</button></div>
+    <p class="status" id="autoStatus"></p>
+    <video id="preview" controls style="width:100%;border-radius:8px;display:none;margin-top:4px"></video>
+    <div class="row"><button id="saveVideo" disabled>Video speichern</button></div>
   </div>
 
   <div class="box">
-    <h2><em>3</em>Abspielen und aufnehmen</h2>
-    <p class="hint">Spielt das Voiceover ab und bewegt die Abdeckung genau an deinen Markern. Nimm dabei den Bildschirm auf.</p>
-    <div class="row">
-      <button id="play" disabled>▶ Abspielen</button>
-      <button class="ghost" id="remark" disabled>Marker neu setzen</button>
-      <button class="ghost" id="dl" disabled>Audio speichern</button>
-    </div>
-    <audio id="audio" controls style="width:100%;display:none"></audio>
-  </div>
-
-  <div class="box">
-    <h2><em>4</em>Look</h2>
+    <h2><em>3</em>Look</h2>
     <label>Abdeckung</label>
     <select id="coverSel">
+      <option value="card">Schwarze Metallkarte (Standard)</option>
       <option value="gold">Goldbarren (glänzt)</option>
       <option value="cash">Geldschein</option>
-      <option value="card">Schwarze Metallkarte</option>
       <option value="secret">„Top Secret“-Akte</option>
     </select>
     <div class="row"><button class="ghost" id="prev">◂</button><button class="ghost" id="next">▸</button><button class="ghost" id="reset">Reset</button><button class="ghost" id="clean">Stift aus</button></div>
+  </div>
+
+  <div class="box">
+    <details><summary>Manuelle Aufnahme (Alternative, falls die Automatik bei dir nicht geht)</summary>
+      <p class="hint">Start drücken, dann den Text im Teleprompter lesen. Vor jeder Zeile einmal <b>Leertaste</b> drücken oder aufs Bild tippen. Dann rutscht die Abdeckung weiter und du liest die angezeigte Zeile. Die Zeitpunkte werden gespeichert.</p>
+      <div class="row">
+        <button class="red" id="rec">● Aufnahme starten</button>
+        <button class="ghost" id="upBtn" type="button">Audio hochladen</button>
+        <input type="file" id="upload" accept="audio/*" hidden>
+      </div>
+      <p class="status" id="recStatus"></p>
+      <p class="hint">Spielt das Voiceover ab und bewegt die Abdeckung genau an deinen Markern. Nimm dabei den Bildschirm auf.</p>
+      <div class="row">
+        <button id="play" disabled>▶ Abspielen</button>
+        <button class="ghost" id="remark" disabled>Marker neu setzen</button>
+        <button class="ghost" id="dl" disabled>Audio speichern</button>
+      </div>
+      <audio id="audio" controls style="width:100%;display:none"></audio>
+    </details>
   </div>
 </div>
 
@@ -148,7 +159,7 @@ rows:`0 g|Your Body Eats Your Muscles
 150 g|Gym Rat Mode
 180 g|Serious Athlete
 200 g+|Beast Mode
-And you? ■|???`,foot:"■ Download Pumpy AI ■",brand:"Pumpy Workout and Calorie Tracker",cover:"gold",vo:[]};
+And you? ■|???`,foot:"■ Download Pumpy AI ■",brand:"Pumpy Workout and Calorie Tracker",cover:"card",vo:[]};
 const $=id=>document.getElementById(id);
 let s={...D};try{Object.assign(s,JSON.parse(localStorage.getItem("rs2")||"{}"))}catch(e){}
 const save=()=>{try{localStorage.setItem("rs2",JSON.stringify(s))}catch(e){}};
@@ -204,6 +215,11 @@ $("coverSel").onchange=e=>{s.cover=e.target.value;save();render()};
 const TPL={"protein": {"name": "Protein → Körper", "title": "Your Protein Intake|→ Your Body", "head": "Protein / Day|What’s Happening to You", "rows": "0 g | Your Body Eats Your Muscles\n30 g | Slowly Falling Apart\n50 g | Bare Minimum — RDA Level\n80 g | Average & Weak\n100 g | Finally Waking Up\n130 g | Actually Building Something\n150 g | Gym Rat Mode\n180 g | Serious Athlete\n200 g+ | Beast Mode\nAnd you? ■ | ???", "foot": "■ Download Pumpy AI ■", "vo": []}, "bench": {"name": "Bankdrücken nach Alter", "title": "Average Bench Press|→ By Age (Men, 1RM)", "head": "Age Group|What You Should Bench to Be Average", "rows": "16 – 19 years | You should bench 45 – 50 kg to be average\n20 – 29 years | You should bench 60 – 65 kg to be average\n30 – 39 years | You should bench 60 – 65 kg to be average\n40 – 49 years | You should bench 55 – 60 kg to be average\n50 – 59 years | You should bench 50 – 55 kg to be average\n60 – 69 years | You should bench 40 – 45 kg to be average\n70+ years | You should bench 30 – 35 kg to be average\nUntrained Man | You should bench 40 – 45 kg to be average\n1 Year Gym Regular | You should bench 70 – 75 kg to be average\nAnd you? ■ | How much do you bench?", "foot": "■ Download Pumpy AI ■", "vo": []}, "food": {"name": "Lebensmittel → Protein", "title": "Food Portion|→ Protein Amount", "head": "Food (Portion)|Exact Protein Content", "rows": "1 Boiled Egg (Large) | 6 g Protein\n1 Glass Milk (250 ml) | 8 g Protein\nPeanut Butter (30 g) | 8 g Protein\nCooked Lentils (150 g) | 14 g Protein\nWhey Scoop (30 g) | 24 g Protein\nCottage Cheese (200 g) | 26 g Protein\nCanned Tuna (1 Tin) | 30 g Protein\nChicken Breast (150 g) | 35 g Protein\nLean Beef Rump (200 g) | 46 g Protein\nWhat are you eating? ■ | Track Every Gram!", "foot": "■ Download Pumpy AI ■", "vo": []}, "kcal": {"name": "Kalorien → 80-kg-Körper", "title": "80 kg Person|→ Daily Calories Effect", "head": "Calories / Day|What Happens to an 80 kg Body", "rows": "1,200 kcal | Crash Diet — Losing Muscle Fast (-1.2 kg/week)\n1,600 kcal | Aggressive Cut (-0.9 kg fat/week)\n1,900 kcal | Optimal Fat Loss Zone (-0.5 kg fat/week)\n2,100 kcal | Slow Leaning Out (-0.3 kg fat/week)\n2,400 kcal | Exact Maintenance Level (Zero Weight Change)\n2,700 kcal | Clean Bulk Zone (+0.25 kg muscle & slight fat/week)\n3,000 kcal | Fast Weight Gain (+0.6 kg mostly fat/week)\n3,500 kcal+ | Heavy Dirty Bulk (+1.0 kg fat accumulation)\nWhere are your calories? ■ | Know Your Maintenance!", "foot": "■ Download Pumpy AI ■", "vo": []}, "gym": {"name": "Protein + Gym → Muskeln", "title": "80 kg Lifter + Gym|→ Muscle Loss or Growth", "head": "Daily Protein|Body Response With Weight Training", "rows": "< 50 g / day | Active Muscle Loss (Training destroys tissue without repair)\n65 g / day | Minimal Maintenance — Zero New Muscle Built\n90 g (1.1 g/kg) | Slow Muscle Preservation, Very Limited Gains\n120 g (1.5 g/kg) | Noticeable Muscle Growth Beginning\n140 g (1.75 g/kg) | Solid Hypertrophy Zone — Reliable Growth\n160 g (2.0 g/kg) | Optimal Sweet Spot for Maximum Muscle Building\n180 g (2.25 g/kg) | Peak Gains & Best Muscle Retention in a Deficit\n200 g+ (2.5 g/kg) | Full Anabolic Saturation & Maximum Satiety\nHow much do you feed your 80 kg? ■ | Don’t Waste Your Workouts!", "foot": "■ Download Pumpy AI ■", "vo": []}};
 TPL.protein.vo=["Zero protein? Your body literally starts eating your own muscles.","Thirty grams and you're slowly falling apart.","Fifty grams is the bare minimum the RDA tells you.","Eighty grams: average, and honestly still weak.","A hundred grams, your body is finally waking up.","One-thirty and you're actually building something.","One-fifty? Welcome to gym rat mode.","One-eighty is serious athlete territory.","Two hundred plus: absolute beast mode.","So where are you? Track it with Pumpy AI."];
 if(!(s.vo&&s.vo.filter(Boolean).length))s.vo=[...TPL.protein.vo];
+TPL.bench.vo=["Sixteen to nineteen? You should be benching forty five to fifty kilos.","Twenties: sixty to sixty five kilos is the average bench.","Thirties: still sixty to sixty five kilos, same expectation.","Forties drop slightly, fifty five to sixty kilos average.","Fifties: fifty to fifty five kilos keeps you average.","Sixties: forty to forty five kilos is the norm.","Seventy plus: thirty to thirty five kilos is average.","Never trained? Forty to forty five kilos is your starting average.","One year in the gym? Seventy to seventy five kilos, easy.","So how much do you bench? Drop it in the comments."];
+TPL.food.vo=["One boiled egg gives you six grams of protein.","A glass of milk adds eight grams.","Peanut butter, thirty grams, also eight grams of protein.","Cooked lentils, one fifty grams, fourteen grams protein.","One scoop of whey: twenty four grams, instantly.","Two hundred grams of cottage cheese: twenty six grams.","A tin of tuna gives you thirty grams.","Chicken breast, one fifty grams, thirty five grams protein.","Two hundred grams of lean beef rump: forty six grams.","So what are you eating today? Track every gram."];
+TPL.kcal.vo=["At twelve hundred kcal you're crash dieting, losing muscle fast.","Sixteen hundred kcal is an aggressive cut.","Nineteen hundred kcal is the optimal fat loss zone.","Twenty one hundred kcal means slowly leaning out.","Twenty four hundred kcal is your exact maintenance level.","Twenty seven hundred kcal puts you in a clean bulk.","Three thousand kcal means fast weight gain, mostly fat.","Thirty five hundred plus is a heavy dirty bulk.","So where are your calories? Know your maintenance."];
+TPL.gym.vo=["Under fifty grams a day? Active muscle loss, even with training.","Sixty five grams: minimal maintenance, zero new muscle.","Ninety grams, one point one per kilo: slow preservation, very limited gains.","One twenty grams: noticeable muscle growth begins.","One forty grams: solid hypertrophy zone, reliable growth.","One sixty grams: the optimal sweet spot for muscle building.","One eighty grams: peak gains, even in a deficit.","Two hundred plus grams: full anabolic saturation.","So how much are you feeding your body? Don't waste your workouts."];
+
 Object.entries(TPL).forEach(([k,t])=>$("tpl").insertAdjacentHTML("beforeend",`<option value="${k}">${esc(t.name)}</option>`));
 $("loadTpl").onclick=()=>{const t=TPL[$("tpl").value];Object.assign(s,{title:t.title,head:t.head,rows:t.rows,foot:t.foot,vo:[...t.vo]});
  if(!s.vo.length)s.vo=makeVo();save();syncInputs();step=0;marks=[];render();$("genStatus").textContent="Vorlage geladen."};
@@ -251,7 +267,83 @@ function cooldown(sec){$("gen").disabled=true;const end=Date.now()+sec*1000;
     if(left<=0){clearInterval(t);$("gen").disabled=!sample;$("gen").textContent="Neues Blatt erstellen";$("genStatus").textContent="Du kannst es jetzt erneut versuchen.";return}
     $("gen").textContent=`Bitte warten … ${left} s`;$("genStatus").textContent="Claude wurde zu oft kurz hintereinander angefragt. Der Button ist gleich wieder frei."},250)}
 
-/* ---- 2: record ---- */
+/* ---- 2: speech synthesis + automatic video ---- */
+let voices=[];
+function refreshVoices(){voices=(window.speechSynthesis&&speechSynthesis.getVoices())||[];populateVoiceSelect()}
+if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=refreshVoices;refreshVoices()}
+else{$("autoVideo").disabled=true;$("testVoice").disabled=true;$("autoStatus").textContent="Dieser Browser kann keine Sprache erzeugen (Web Speech API fehlt). Nutz die manuelle Aufnahme unten."}
+function populateVoiceSelect(){
+  const sel=$("voice");const lang=$("voLang").value;
+  const filtered=voices.filter(v=>v.lang.toLowerCase().startsWith(lang));
+  const list=filtered.length?filtered:voices;
+  sel.innerHTML=list.length?list.map((v,i)=>`<option value="${i}">${esc(v.name)} — ${v.lang}</option>`).join(""):"<option value=''>Stimmen werden geladen …</option>";
+  sel._list=list;
+}
+$("voLang").addEventListener("change",populateVoiceSelect);
+function currentVoice(){const sel=$("voice");const list=sel._list||[];return list[+sel.value]||null}
+$("rate").oninput=()=>{$("rateVal").textContent=(+$("rate").value).toFixed(2)+"×"};
+function speakLine(text){return new Promise(resolve=>{
+  if(!('speechSynthesis' in window)){resolve();return}
+  const u=new SpeechSynthesisUtterance(text);
+  const v=currentVoice();if(v)u.voice=v;
+  u.rate=+($("rate").value||1);
+  let done=false;const finish=()=>{if(!done){done=true;resolve()}};
+  u.onend=finish;u.onerror=finish;
+  speechSynthesis.speak(u);
+  setTimeout(finish,Math.max(6000,text.length*180));
+})}
+async function runVoiceover(){
+  step=0;update();
+  for(let i=0;i<data.length;i++){
+    $("autoStatus").textContent=`Zeile ${i+1}/${data.length} wird gesprochen …`;
+    await speakLine((s.vo&&s.vo[i])||data[i][1]);
+    step=i+1;update();
+  }
+}
+$("testVoice").onclick=()=>{speechSynthesis.cancel();speakLine((s.vo&&s.vo[0])||data[0]?.[1]||"Das ist ein Test der Stimme.")};
+
+function pickMime(){
+  const c=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
+  for(const m of c)if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m;
+  return "";
+}
+let videoBlob=null;
+const autoBusyIds=["autoVideo","testVoice","loadTpl","next","prev","reset"];
+$("autoVideo").onclick=async()=>{
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){$("autoStatus").textContent="Dieser Browser kann keine automatische Bildschirmaufnahme. Nutz die manuelle Aufnahme unten.";return}
+  videoBlob=null;$("saveVideo").disabled=true;$("preview").style.display="none";
+  autoBusyIds.forEach(id=>$(id).disabled=true);
+  $("autoStatus").textContent="Bitte im Auswahlfenster diesen Tab wählen und „Audio teilen“ anhaken …";
+  let stream;
+  try{stream=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:"browser"},audio:true,preferCurrentTab:true})}
+  catch(e){$("autoStatus").textContent="Aufnahme abgebrochen oder vom Browser nicht erlaubt.";autoBusyIds.forEach(id=>$(id).disabled=false);return}
+  const hasAudio=stream.getAudioTracks().length>0;
+  step=0;update();
+  const mime=pickMime();
+  let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined)}
+  catch(e){$("autoStatus").textContent="Videoaufnahme wird von diesem Browser nicht unterstützt.";stream.getTracks().forEach(t=>t.stop());autoBusyIds.forEach(id=>$(id).disabled=false);return}
+  const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  const stopped=new Promise(res=>rec.onstop=res);
+  mode="auto";rec.start();
+  await new Promise(r=>setTimeout(r,400));
+  await runVoiceover();
+  await new Promise(r=>setTimeout(r,700));
+  rec.stop();stream.getTracks().forEach(t=>t.stop());mode="idle";
+  await stopped;
+  videoBlob=new Blob(chunks,{type:mime||"video/webm"});
+  $("preview").src=URL.createObjectURL(videoBlob);$("preview").style.display="block";
+  $("saveVideo").disabled=false;autoBusyIds.forEach(id=>$(id).disabled=false);
+  $("autoStatus").textContent=hasAudio?"Fertig! Video unten ansehen und speichern.":"Fertig, aber ohne Ton — bitte im Auswahlfenster „Audio teilen“ anhaken und neu aufnehmen.";
+};
+$("saveVideo").onclick=async()=>{
+  if(!videoBlob)return;const ext=videoBlob.type.includes("mp4")?"mp4":"webm";
+  const dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null;
+  if(dl){try{await dl.save({filename:"reveal-video."+ext,data:videoBlob})}catch(e){}}
+  else{const l=document.createElement("a");l.href=URL.createObjectURL(videoBlob);l.download="reveal-video."+ext;l.click()}
+};
+
+/* ---- 3: manual record (fallback) ---- */
+
 let mr=null,chunks=[],recStart=0;
 $("rec").onclick=async()=>{
   if(mode==="rec"){mr.stop();return}
