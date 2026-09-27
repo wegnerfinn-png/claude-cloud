@@ -241,9 +241,15 @@ Antworte NUR mit JSON: {"title":"...|→ ...","head":"...|...","rows":[["links",
   try{const j=await sample.json(prompt,{modelTier:"default"});
     s.title=j.title;s.head=j.head;s.rows=j.rows.map(r=>r.join(" | ")).join("\n");s.vo=j.vo||makeVo();
     save();syncInputs();step=0;marks=[];render();$("genStatus").textContent="Neues Blatt fertig. Unter „Tabelle bearbeiten“ kannst du alles anpassen.";
-  }catch(e){$("genStatus").textContent=e.code==="not_granted"?"Zugriff auf Claude wurde abgelehnt.":"Fehler: "+(e.message||e.code)}
+  }catch(e){
+    if(e.code==="rate_limited"||/too often/i.test(e.message||"")){cooldown(90);return}
+    $("genStatus").textContent=e.code==="not_granted"?"Zugriff auf Claude wurde abgelehnt.":"Fehler: "+(e.message||e.code)}
   $("gen").disabled=!sample;
 };
+function cooldown(sec){$("gen").disabled=true;const end=Date.now()+sec*1000;
+  const t=setInterval(()=>{const left=Math.ceil((end-Date.now())/1000);
+    if(left<=0){clearInterval(t);$("gen").disabled=!sample;$("gen").textContent="Neues Blatt erstellen";$("genStatus").textContent="Du kannst es jetzt erneut versuchen.";return}
+    $("gen").textContent=`Bitte warten … ${left} s`;$("genStatus").textContent="Claude wurde zu oft kurz hintereinander angefragt. Der Button ist gleich wieder frei."},250)}
 
 /* ---- 2: record ---- */
 let mr=null,chunks=[],recStart=0;
