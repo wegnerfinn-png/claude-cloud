@@ -2,6 +2,8 @@
 
 Web-App für Reveal-Tabellen-Videos im 9:16-Format. Eine Abdeckung (Goldbarren, Geldschein, Karte, Akte) rutscht synchron zum Voiceover Zeile für Zeile nach unten. Die App läuft komplett im Browser, ohne Claude und ohne Backend.
 
+Zweites Format: **Myth Buster** unter `/myth.html`. Ein Mythos erscheint, wird durchgestrichen und abgestempelt, dann baut sich die Wahrheit auf, gesprochen von der KI-Stimme des Browsers, mit Untertiteln und automatischer Aufnahme.
+
 ## Auf dem Server starten
 
 ```bash

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Myth Buster Studio</title>
+<style>
+:root{--bg:#0d0f14;--card:#1a1a1a;--ui:#0c0c0c;--uitext:#eee;--muted:#999;--accent:#ffd84a;--red:#ff3b3b;--green:#3ddc84}
+*{box-sizing:border-box}
+body{margin:0;overflow-x:hidden;background:var(--ui);color:var(--uitext);font-family:Helvetica,Arial,sans-serif;display:flex;flex-wrap:wrap;justify-content:center;gap:16px;padding:16px 0}
+.stage{position:relative;width:min(100% - 32px,56.25vh,420px);aspect-ratio:9/16;overflow:hidden;flex:none;align-self:flex-start;border-radius:6px;
+ background:radial-gradient(ellipse at 50% 20%,#23293a,var(--bg) 70%);font-size:var(--fs,9px);font-family:"Arial Black",Helvetica,Arial,sans-serif;font-weight:900;color:#fff}
+.stage::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 4px);pointer-events:none}
+.brand{position:absolute;top:4%;left:0;right:0;text-align:center;font-size:1.2em;letter-spacing:.2em;opacity:.7;text-transform:uppercase}
+.progress{position:absolute;top:8%;left:10%;right:10%;display:flex;gap:4%}
+.progress i{flex:1;height:.5em;border-radius:1em;background:rgba(255,255,255,.15);transition:background .3s}
+.progress i.on{background:var(--accent)}
+.scene{position:absolute;inset:14% 8% 12%;display:flex;flex-direction:column;justify-content:center;gap:4%}
+.hide{opacity:0!important;transform:translateY(1.5em) scale(.96)!important}
+.fx{transition:opacity .45s,transform .45s cubic-bezier(.2,.9,.3,1.3)}
+.tag{align-self:flex-start;background:var(--red);padding:.4em .9em;border-radius:.4em;font-size:1.5em;letter-spacing:.1em}
+.tag.truth{background:var(--green);color:#062a14}
+.myth{position:relative;font-size:3.1em;line-height:1.15;align-self:flex-start}
+.myth::after{content:"";position:absolute;left:-2%;top:52%;height:.14em;width:0;background:var(--red);transform:rotate(-4deg);transition:width .5s ease-out;box-shadow:0 0 .4em var(--red)}
+.myth.struck{color:#8b8f99}
+.myth.struck::after{width:104%}
+.stamp{position:absolute;right:4%;top:18%;font-size:4.5em;color:var(--red);border:.12em solid var(--red);border-radius:.2em;padding:0 .25em;transform:rotate(14deg) scale(3);opacity:0;transition:transform .25s cubic-bezier(.3,1.6,.5,1),opacity .15s}
+.stamp.on{transform:rotate(14deg) scale(1);opacity:.95}
+.truth{font-family:Helvetica,Arial,sans-serif;font-weight:700;font-size:2.2em;line-height:1.3;color:#e9fff1}
+.truth b{color:var(--green)}
+.big{font-size:4.2em;line-height:1.05;text-align:center}
+.big em{font-style:normal;color:var(--accent)}
+.sub{font-family:Helvetica,Arial,sans-serif;font-weight:700;font-size:1.8em;text-align:center;opacity:.8}
+.cta{align-self:center;background:var(--accent);color:#111;border-radius:2em;padding:.6em 1.4em;font-size:2em;box-shadow:0 0 2em rgba(255,216,74,.5);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-2%)}40%{transform:translateX(2%)}60%{transform:translateX(-1%)}80%{transform:translateX(1%)}}
+.cap{position:absolute;left:6%;right:6%;bottom:4%;text-align:center;font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:1.6em;line-height:1.3;text-shadow:0 2px 6px #000;min-height:2.6em}
+.cap span{background:rgba(0,0,0,.55);padding:.1em .35em;border-radius:.3em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.stage.nocap .cap{display:none}
+.panel{width:min(100% - 32px,520px);display:flex;flex-direction:column;gap:12px}
+.box{background:var(--card);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.box h2{margin:0;font-size:14px;letter-spacing:.04em}
+.box h2 em{font-style:normal;color:var(--accent);margin-right:6px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{background:#fff;color:#000;border:0;border-radius:999px;padding:10px 16px;font-weight:600;cursor:pointer;font-size:14px}
+button.ghost{background:#2a2a2a;color:#eee}
+button.red{background:var(--red);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+textarea,input,select{width:100%;background:#111;color:#eee;border:1px solid #333;border-radius:8px;padding:10px;font:13px/1.5 ui-monospace,monospace}
+label{font-size:12px;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.status{font-size:13px;color:var(--accent);min-height:1em;margin:0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="brand" id="brand"></div>
+  <div class="progress" id="progress"></div>
+  <div class="scene" id="scene"></div>
+  <div class="cap" id="cap"></div>
+</div>
+
+<div class="panel">
+  <div class="box">
+    <h2><em>1</em>Mythen</h2>
+    <label>Vorlage</label>
+    <div class="row"><select id="tpl" style="flex:1;width:auto"></select><button id="loadTpl">Laden</button></div>
+    <details><summary style="cursor:pointer;font-size:13px;color:var(--muted)">Skript bearbeiten</summary>
+      <label>Hook (Titel, *Wort* = gelb)</label><input id="iHook">
+      <label>Hook gesprochen</label><input id="iHookVo">
+      <label>Mythen: eine pro Zeile — Mythos | Wahrheit (Text auf dem Bild, *Wort* = grün) | Wahrheit gesprochen</label>
+      <textarea id="iMyths" rows="10"></textarea>
+      <label>CTA-Text auf dem Button</label><input id="iCta">
+      <label>CTA gesprochen</label><input id="iCtaVo">
+    </details>
+    <p class="hint">Im Bild auf ▸ tippen oder Leertaste: nächster Schritt. Alte Tabellen-Videos: <a href="./">Reveal Studio</a>.</p>
+    <div class="row"><button class="ghost" id="prev">◂</button><button class="ghost" id="next">▸</button><button class="ghost" id="reset">Reset</button><button class="ghost" id="capBtn">Untertitel aus</button></div>
+  </div>
+
+  <div class="box">
+    <h2><em>2</em>KI-Stimme &amp; Video</h2>
+    <p class="hint">Die Stimme kommt aus der Sprachausgabe deines Browsers. Am natürlichsten klingen in Chrome die „Google …“- und in Edge die „Microsoft … Online (Natural)“-Stimmen. Beim Aufnehmen <b>diesen Tab</b> wählen und <b>„Audio teilen“</b> anhaken.</p>
+    <label>Sprache</label>
+    <select id="lang"><option value="en">Englisch</option><option value="de">Deutsch</option></select>
+    <label>Stimme</label>
+    <div class="row"><select id="voice" style="flex:1;width:auto"></select><button class="ghost" id="testVoice">🔊 Testen</button></div>
+    <label>Sprechtempo <span id="rateVal">1.05×</span></label>
+    <input type="range" id="rate" min="0.8" max="1.3" step="0.05" value="1.05">
+    <div class="row"><button class="ghost" id="preview">▶ Vorschau mit Stimme</button><button class="red" id="autoVideo">● Video aufnehmen</button></div>
+    <p class="status" id="status"></p>
+    <video id="vid" controls style="width:100%;border-radius:8px;display:none"></video>
+    <div class="row"><button id="saveVideo" disabled>Video speichern</button></div>
+  </div>
+</div>
+
+<script>
+const TPL={
+ en_nutrition:{name:"5 Ernährungsmythen (EN)",lang:"en",hook:"5 nutrition *myths*|you still believe",hookVo:"Five nutrition myths you probably still believe. Number three is wild.",
+  myths:[
+  ["You can only absorb 30 g of protein per meal","Your body absorbs *all* of it. Big doses just digest slower and still build muscle.","Wrong. Your body absorbs all of it. Bigger doses just digest slower, and they still build muscle."],
+  ["Eating late makes you fat","Your *daily total* decides. The clock doesn't.","False. Your daily calorie total decides, not the clock."],
+  ["High protein wrecks healthy kidneys","No evidence in healthy people even at *2 g per kg*.","Nope. In healthy people there's no evidence of harm, even at two grams per kilo."],
+  ["6 small meals boost your metabolism","Meal frequency doesn't change *total burn*. Eat how it fits you.","Myth. Meal frequency doesn't change how much you burn. Eat however fits your day."],
+  ["Carbs make you fat","A *calorie surplus* makes you fat. Carbs fuel your training.","Carbs don't make you fat. A calorie surplus does. Carbs actually fuel your training."]],
+  cta:"Download Pumpy AI",ctaVo:"Stop guessing. Track your protein and calories with Pumpy AI."},
+ de_ernaehrung:{name:"5 Ernährungsmythen (DE)",lang:"de",hook:"5 Ernährungs-*Mythen*|die du noch glaubst",hookVo:"Fünf Ernährungsmythen, die du wahrscheinlich immer noch glaubst. Nummer drei ist krass.",
+  myths:[
+  ["Mehr als 30 g Protein pro Mahlzeit sind verschwendet","Dein Körper nimmt *alles* auf. Große Portionen werden nur langsamer verdaut.","Falsch. Dein Körper nimmt alles auf. Große Portionen werden nur langsamer verdaut und bauen trotzdem Muskeln."],
+  ["Spät essen macht dick","Deine *Tagesbilanz* entscheidet, nicht die Uhrzeit.","Stimmt nicht. Deine Tagesbilanz entscheidet, nicht die Uhrzeit."],
+  ["Viel Protein schadet gesunden Nieren","Bei Gesunden kein Beleg für Schäden, selbst bei *2 g pro kg*.","Nein. Bei gesunden Menschen gibt es keinen Beleg für Schäden, selbst bei zwei Gramm pro Kilo."],
+  ["6 kleine Mahlzeiten pushen den Stoffwechsel","Die Anzahl der Mahlzeiten ändert den *Gesamtverbrauch* nicht.","Mythos. Die Anzahl der Mahlzeiten ändert deinen Verbrauch nicht. Iss so, wie es in deinen Tag passt."],
+  ["Kohlenhydrate machen dick","Ein *Kalorienüberschuss* macht dick. Carbs sind Trainings-Treibstoff.","Kohlenhydrate machen nicht dick. Ein Kalorienüberschuss schon. Carbs sind Treibstoff fürs Training."]],
+  cta:"Pumpy AI laden",ctaVo:"Hör auf zu raten. Tracke Protein und Kalorien mit Pumpy AI."},
+ en_protein:{name:"Protein-Mythen (EN)",lang:"en",hook:"Protein *myths*|killing your gains",hookVo:"These protein myths are killing your gains.",
+  myths:[
+  ["You need a shake within 30 minutes after training","The anabolic window is *hours* wide. Daily protein matters most.","Relax. The so-called anabolic window is hours wide. Your daily total matters way more."],
+  ["Plant protein can't build muscle","Enough total protein builds muscle, *plant or animal*.","Wrong. Eat enough total protein and plants build muscle too."],
+  ["Eggs raise your cholesterol","For most people eggs barely move *blood cholesterol*.","For most people, eggs barely move blood cholesterol."],
+  ["You'll get bulky from protein","Muscle comes from *training + surplus*, not protein alone.","Protein alone won't make you bulky. Muscle takes training and a surplus."]],
+  cta:"Download Pumpy AI",ctaVo:"Know your real protein number. Track it with Pumpy AI."}
+};
+const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const mark=(t,cls)=>esc(t).replace(/\*(.+?)\*/g,`<${cls}>$1</${cls}>`);
+let s;try{s=JSON.parse(localStorage.getItem("myth1")||"null")}catch(e){}
+if(!s)s=JSON.parse(JSON.stringify(TPL.en_nutrition));
+const save=()=>{try{localStorage.setItem("myth1",JSON.stringify(s))}catch(e){}};
+
+// steps: hook, then per myth [myth shown, busted+truth], then cta
+let steps=[],step=0,mode="idle";
+function build(){
+  steps=[{k:"hook",vo:s.hookVo}];
+  s.myths.forEach((m,i)=>{steps.push({k:"myth",i,vo:m[0]});steps.push({k:"truth",i,vo:m[2]||m[1].replace(/\*/g,"")})});
+  steps.push({k:"cta",vo:s.ctaVo});
+  $("brand").textContent="■ Pumpy AI ■";
+  $("progress").innerHTML=s.myths.map(()=>"<i></i>").join("");
+  step=Math.min(step,steps.length-1);show();
+}
+function show(){
+  const st=$("stage").getBoundingClientRect();$("stage").style.setProperty("--fs",(st.width/44)+"px");
+  const cur=steps[step],sc=$("scene");
+  [...$("progress").children].forEach((el,i)=>el.classList.toggle("on",cur.k==="cta"||(cur.i!=null&&i<=cur.i)));
+  $("progress").style.visibility=cur.k==="hook"?"hidden":"visible";
+  if(cur.k==="hook"){const [a,b]=s.hook.split("|");
+    sc.innerHTML=`<div class="big fx hide">${mark(a,"em")}</div><div class="sub fx hide">${esc(b||"")}</div>`;reveal(sc,0,300)}
+  else if(cur.k==="cta"){
+    sc.innerHTML=`<div class="big fx hide">Stop<br><em>guessing.</em></div><div class="sub fx hide">${s.lang==="de"?"Tracke jedes Gramm.":"Track every gram."}</div><div class="cta fx hide">${esc(s.cta)}</div>`;reveal(sc,0,350)}
+  else{const m=s.myths[cur.i],busted=cur.k==="truth";
+    sc.innerHTML=`<div class="tag fx hide">${s.lang==="de"?"MYTHOS":"MYTH"} #${cur.i+1}</div><div class="myth fx hide">„${esc(m[0])}“</div><div class="stamp">✗</div>
+     <div class="tag truth fx hide">${s.lang==="de"?"WAHRHEIT":"TRUTH"}</div><div class="truth fx hide">${mark(m[1],"b")}</div>`;
+    const els=sc.querySelectorAll(".fx");
+    if(!busted){reveal(sc,0,250,2)}
+    else{els[0].classList.remove("hide");els[1].classList.remove("hide");
+      requestAnimationFrame(()=>{els[1].classList.add("struck");
+        setTimeout(()=>{sc.querySelector(".stamp").classList.add("on");$("stage").classList.remove("shake");void $("stage").offsetWidth;$("stage").classList.add("shake")},380);
+        setTimeout(()=>{els[2].classList.remove("hide")},700);setTimeout(()=>{els[3].classList.remove("hide")},900)})}}
+  $("cap").innerHTML=cur.vo?`<span>${esc(cur.vo)}</span>`:"";
+}
+function reveal(sc,start,gap,max){[...sc.querySelectorAll(".fx")].slice(0,max||99).forEach((el,i)=>setTimeout(()=>el.classList.remove("hide"),start+60+i*gap))}
+function go(d){step=Math.max(0,Math.min(steps.length-1,step+d));show()}
+
+$("stage").onclick=()=>{if(mode==="idle")go(1)};
+document.onkeydown=e=>{if(e.target.matches("input,textarea,select")||mode!=="idle")return;
+  if(e.key===" "||e.key==="ArrowRight"){e.preventDefault();go(1)}if(e.key==="ArrowLeft")go(-1)};
+$("next").onclick=()=>go(1);$("prev").onclick=()=>go(-1);$("reset").onclick=()=>{step=0;show()};
+$("capBtn").onclick=()=>{const off=$("stage").classList.toggle("nocap");$("capBtn").textContent=off?"Untertitel an":"Untertitel aus"};
+addEventListener("resize",show);
+
+/* templates + editing */
+Object.entries(TPL).forEach(([k,t])=>$("tpl").insertAdjacentHTML("beforeend",`<option value="${k}">${esc(t.name)}</option>`));
+$("loadTpl").onclick=()=>{s=JSON.parse(JSON.stringify(TPL[$("tpl").value]));save();sync();step=0;build();$("lang").value=s.lang;fillVoices()};
+function sync(){$("iHook").value=s.hook;$("iHookVo").value=s.hookVo;$("iCta").value=s.cta;$("iCtaVo").value=s.ctaVo;
+  $("iMyths").value=s.myths.map(m=>m.join(" | ")).join("\n")}
+[["iHook","hook"],["iHookVo","hookVo"],["iCta","cta"],["iCtaVo","ctaVo"]].forEach(([id,k])=>$(id).oninput=()=>{s[k]=$(id).value;save();build()});
+$("iMyths").oninput=()=>{s.myths=$("iMyths").value.split("\n").filter(l=>l.trim()).map(l=>l.split("|").map(x=>x.trim()));save();build()};
+
+/* voice */
+let voices=[];
+function fillVoices(){voices=(window.speechSynthesis&&speechSynthesis.getVoices())||[];
+  const lang=$("lang").value,f=voices.filter(v=>v.lang.toLowerCase().startsWith(lang)),list=f.length?f:voices;
+  const score=v=>(/natural|neural|online/i.test(v.name)?2:0)+(/google/i.test(v.name)?1:0);
+  list.sort((a,b)=>score(b)-score(a));
+  $("voice").innerHTML=list.length?list.map((v,i)=>`<option value="${i}">${esc(v.name)} — ${v.lang}</option>`).join(""):"<option>Stimmen werden geladen …</option>";
+  $("voice")._list=list}
+if("speechSynthesis" in window){speechSynthesis.onvoiceschanged=fillVoices;fillVoices()}
+else{["preview","autoVideo","testVoice"].forEach(id=>$(id).disabled=true);$("status").textContent="Dieser Browser hat keine Sprachausgabe. Bitte Chrome oder Edge nutzen."}
+$("lang").onchange=fillVoices;
+$("rate").oninput=()=>$("rateVal").textContent=(+$("rate").value).toFixed(2)+"×";
+function speak(text){return new Promise(res=>{if(!text){setTimeout(res,1200);return}
+  const u=new SpeechSynthesisUtterance(text),v=($("voice")._list||[])[+$("voice").value];
+  if(v){u.voice=v;u.lang=v.lang}u.rate=+$("rate").value;
+  let done=false;const fin=()=>{if(!done){done=true;res()}};u.onend=fin;u.onerror=fin;
+  speechSynthesis.speak(u);setTimeout(fin,Math.max(6000,text.length*160))})}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+$("testVoice").onclick=()=>{speechSynthesis.cancel();speak(s.hookVo)};
+
+let stopFlag=false;
+async function play(){
+  mode="play";stopFlag=false;
+  for(step=0;step<steps.length&&!stopFlag;step++){show();
+    $("status").textContent=`Schritt ${step+1}/${steps.length} …`;
+    await wait(steps[step].k==="truth"?900:450);
+    await speak(steps[step].vo);
+    await wait(steps[step].k==="myth"?350:250)}
+  step=steps.length-1;await wait(900);mode="idle"}
+$("preview").onclick=async()=>{if(mode!=="idle"){stopFlag=true;speechSynthesis.cancel();return}
+  $("preview").textContent="■ Stopp";await play();$("preview").textContent="▶ Vorschau mit Stimme";$("status").textContent="Vorschau fertig."};
+
+/* recording */
+function pickMime(){for(const m of["video/mp4;codecs=avc1,mp4a","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"])
+  if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m;return ""}
+let videoBlob=null;
+$("autoVideo").onclick=async()=>{
+  if(mode!=="idle")return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){$("status").textContent="Automatische Aufnahme geht hier nicht. Bitte Chrome/Edge am Desktop über https nutzen.";return}
+  $("saveVideo").disabled=true;$("vid").style.display="none";
+  $("status").textContent="Im Fenster diesen Tab wählen und „Audio teilen“ anhaken …";
+  let stream;try{stream=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:"browser"},audio:true,preferCurrentTab:true})}
+  catch(e){$("status").textContent=window.self!==window.top?"Eingebettet blockiert der Browser die Aufnahme. Öffne die Seite direkt über ihre Adresse.":"Aufnahme abgebrochen oder nicht erlaubt.";return}
+  const hasAudio=stream.getAudioTracks().length>0,mime=pickMime();
+  let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined)}catch(e){$("status").textContent="Videoaufnahme wird nicht unterstützt.";stream.getTracks().forEach(t=>t.stop());return}
+  const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);const stopped=new Promise(r=>rec.onstop=r);
+  ["preview","autoVideo"].forEach(id=>$(id).disabled=true);
+  step=0;show();await wait(500);rec.start();await wait(300);
+  await play();
+  rec.stop();stream.getTracks().forEach(t=>t.stop());await stopped;
+  videoBlob=new Blob(chunks,{type:mime||"video/webm"});
+  $("vid").src=URL.createObjectURL(videoBlob);$("vid").style.display="block";$("saveVideo").disabled=false;
+  ["preview","autoVideo"].forEach(id=>$(id).disabled=false);
+  $("status").textContent=hasAudio?"Fertig! Unten ansehen und speichern. Zum Zuschneiden auf 9:16 z. B. CapCut nutzen.":"Fertig, aber ohne Ton. Bitte „Audio teilen“ anhaken und neu aufnehmen.";
+};
+$("saveVideo").onclick=()=>{if(!videoBlob)return;const l=document.createElement("a");l.href=URL.createObjectURL(videoBlob);
+  l.download="myth-buster."+(videoBlob.type.includes("mp4")?"mp4":"webm");l.click()};
+
+sync();$("lang").value=s.lang||"en";fillVoices();build();
+</script>
+</body>
+</html>
