@@ -1,0 +1,442 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Anton;src:url(fonts/Anton.ttf)}
+@font-face{font-family:Mont;src:url(fonts/Montserrat.ttf);font-weight:100 900}
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#07080c}
+#v{position:absolute;inset:0;overflow:hidden;font-family:Mont,sans-serif;color:#fff}
+.l{position:absolute;left:0;top:0;will-change:transform,opacity;transform-origin:50% 50%}
+.c{display:flex;align-items:center;justify-content:center;text-align:center}
+.anton{font-family:Anton,Impact,sans-serif;text-transform:uppercase;letter-spacing:.01em}
+#bg{position:absolute;inset:-200px}
+#grid{position:absolute;inset:-400px;background-image:linear-gradient(rgba(255,255,255,.06) 2px,transparent 2px),linear-gradient(90deg,rgba(255,255,255,.06) 2px,transparent 2px);background-size:120px 120px}
+#glow{position:absolute;left:540px;top:760px;width:1600px;height:1600px;margin:-800px;border-radius:50%}
+#vign{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(0,0,0,.75) 100%);pointer-events:none}
+#flash{position:absolute;inset:0;background:#fff;pointer-events:none}
+.p{position:absolute;border-radius:50%}
+.chipTop{position:absolute;top:118px;height:74px;display:flex;gap:14px;left:0;right:0;justify-content:center}
+.chipTop i{width:120px;height:14px;border-radius:9px;background:rgba(255,255,255,.18);align-self:center}
+.chipTop i.on{background:#ffd23f;box-shadow:0 0 18px #ffd23f}
+.tag{padding:14px 34px;border-radius:18px;font-size:64px}
+.quote{width:900px;font-weight:900;font-size:82px;line-height:1.08;text-align:center}
+.stamp{font-family:Anton;font-size:190px;color:#ff2e4d;border:16px solid #ff2e4d;border-radius:30px;padding:0 40px;line-height:1.15;background:rgba(20,0,5,.35);text-shadow:0 0 30px rgba(255,46,77,.6)}
+.green{color:#35f08a}.yellow{color:#ffd23f}.red{color:#ff2e4d}
+.cap{position:absolute;left:60px;right:60px;top:1500px;height:260px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:0 38px}
+.cap span{font-family:Mont;font-weight:900;font-size:78px;line-height:1.15;display:inline-block;-webkit-text-stroke:10px #000;paint-order:stroke fill;text-transform:uppercase}
+.phone{width:600px;height:1120px;border-radius:78px;background:#0e1118;border:14px solid #2a2f3b;box-shadow:0 40px 120px rgba(0,0,0,.7),0 0 0 3px #454c5c inset}
+.food{font-size:64px;font-weight:900;background:#fff;color:#111;border-radius:60px;padding:14px 30px;white-space:nowrap;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.food b{color:#18b861}
+</style></head>
+<body><div id="v">
+ <div id="bg"><div id="glow"></div><div id="grid"></div></div>
+ <div id="parts"></div>
+ <div id="stage" class="l" style="width:1080px;height:1920px"></div>
+ <div id="vign"></div>
+ <div class="cap" id="cap"></div>
+ <div id="flash"></div>
+</div>
+<script>
+const TL = window.TL;
+const S = {}; TL.segs.forEach(s => S[s.id] = s);
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lin = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = x => 1 - Math.pow(1 - x, 3);
+const eIn = x => x * x * x;
+const eBack = x => { const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2) };
+const eEl = x => x === 0 || x === 1 ? x : Math.pow(2, -9 * x) * Math.sin((x * 10 - .75) * 2.1) + 1;
+const mix = (a, b, x) => a + (b - a) * x;
+const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x) };
+
+// ---------- DOM helpers: build once, update per frame ----------
+const stage = $("stage");
+function el(html, x, y, w, h, cls = "") {
+  const d = document.createElement("div");
+  d.className = "l c " + cls; d.innerHTML = html;
+  Object.assign(d.style, { width: w + "px", height: h + "px" });
+  d._x = x; d._y = y; d._w = w; d._h = h; stage.appendChild(d); return d;
+}
+function set(d, { o = 1, x = 0, y = 0, s = 1, r = 0, sx = null, blur = 0 } = {}) {
+  if (o <= 0.001) { d.style.display = "none"; return }
+  d.style.display = "";
+  d.style.opacity = o;
+  d.style.transform = `translate(${d._x - d._w / 2 + x}px,${d._y - d._h / 2 + y}px) rotate(${r}deg) scale(${sx ?? s},${s})`;
+  d.style.filter = blur ? `blur(${blur}px)` : "";
+}
+// pop-in helper: returns params for a slam/pop entrance
+const popIn = (t, t0, d = .35, from = 2.2) => { const p = lin(t, t0, t0 + d); return { o: clamp(p * 3), s: mix(from, 1, eOut(p)) } };
+const upIn = (t, t0, d = .4, dist = 120) => { const p = lin(t, t0, t0 + d); return { o: p, y: (1 - eOut(p)) * dist, s: mix(.85, 1, eBack(p)) } };
+const outAt = (t, t1, d = .25) => 1 - lin(t, t1, t1 + d);
+
+// ---------- scene windows ----------
+const W = {
+  hook: [0, S.m1q.s - .15], m1: [S.m1q.s - .15, S.m2q.s - .15], m2: [S.m2q.s - .15, S.m3q.s - .15], m3: [S.m3q.s - .15, S.twist.s - .1],
+  twist: [S.twist.s - .1, S.app.s - .05], app: [S.app.s - .05, S.cta.s - .05], cta: [S.cta.s - .05, TL.end + 1]
+};
+const inW = (t, k) => t >= W[k][0] && t < W[k][1];
+const HITS = [S.hook.s, S.m1a.s, S.m2a.s, S.m3a.s, S.twist.s + .05, S.app.s, S.cta.s];
+
+// ---------- background particles ----------
+const parts = [];
+for (let i = 0; i < 38; i++) {
+  const p = document.createElement("div"); p.className = "p";
+  const sz = 6 + hash(i) * 18; Object.assign(p.style, { width: sz + "px", height: sz + "px" });
+  $("parts").appendChild(p); parts.push({ d: p, x: hash(i + 9) * 1080, sp: 40 + hash(i + 3) * 120, ph: hash(i + 5) * 2000, sz });
+}
+
+// ---------- HOOK ----------
+const hStop = el(`<div class="anton red" style="font-size:390px;line-height:1;text-shadow:0 0 60px rgba(255,46,77,.7),0 14px 0 #5a0010">STOP</div>`, 540, 560, 1000, 420);
+const hHand = el(`<div style="font-size:200px">✋</div>`, 540, 250, 300, 260);
+const hBar = el(`<div class="anton" style="font-size:118px;background:#ffd23f;color:#111;padding:6px 40px;border-radius:20px">3 PROTEIN MYTHS</div>`, 540, 900, 1000, 170);
+const hKill = el(`<div class="anton" style="font-size:104px">killing your <span class="red">gains</span> 💀</div>`, 540, 1080, 1000, 150);
+
+// ---------- MYTH scenes ----------
+const topBar = el(`<div class="chipTop" style="position:static"><i></i><i></i><i></i></div>`, 540, 150, 1080, 80);
+function mythBase(n, quote) {
+  return {
+    tag: el(`<div class="tag anton" style="background:#ff2e4d">MYTH #${n}</div>`, 540, 300, 500, 130),
+    quote: el(`<div class="quote">“${quote}”</div>`, 540, 520, 1000, 300),
+    strike: el(`<div style="width:900px;height:22px;background:#ff2e4d;border-radius:11px;box-shadow:0 0 30px #ff2e4d"></div>`, 540, 520, 900, 22),
+    stamp: el(`<div class="stamp">BUSTED</div>`, 540, 540, 900, 300),
+    truth: el(`<div class="tag anton" style="background:#35f08a;color:#062a14">TRUTH ✓</div>`, 540, 780, 500, 130)
+  };
+}
+function baseAnim(b, t, q, a, wEnd) {
+  const out = outAt(t, wEnd - .25);
+  set(b.tag, { ...popIn(t, q.s - .1, .3, 1.8), o: popIn(t, q.s - .1).o * out });
+  const busted = t >= a.s - .05;
+  const qp = upIn(t, q.s + .05, .45, 160);
+  const bp = lin(t, a.s + .5, a.s + .8);
+  set(b.quote, { ...qp, o: qp.o * out * mix(1, .45, bp), y: qp.y + mix(0, -40, eOut(bp)) - 0, s: qp.s * mix(1, .8, eOut(bp)) });
+  b.quote.style.color = busted ? "#a9adb8" : "#fff";
+  const sp = lin(t, a.s - .02, a.s + .18);
+  set(b.strike, { o: sp > 0 ? out : 0, sx: eOut(sp), s: 1, r: -4, y: mix(0, -40, eOut(bp)) });
+  const st = lin(t, a.s - .05, a.s + .17);
+  set(b.stamp, { o: (st > 0 ? 1 : 0) * out * (1 - lin(t, a.s + .55, a.s + .8)), s: mix(3.2, 1, eOut(st)), r: -12 });
+  set(b.truth, { ...popIn(t, a.s + .6, .3, 1.8), o: popIn(t, a.s + .6).o * out });
+  return { out, busted };
+}
+
+// M1: gauge bar with 30 g limit that gets smashed
+const m1 = mythBase(1, "Max <span class='red'>30 g</span> protein per meal");
+const m1gauge = el(`<div style="position:relative;width:860px;height:120px;border-radius:60px;background:#1c2130;border:6px solid #394054;overflow:hidden">
+  <div id="m1fill" style="position:absolute;left:0;top:0;bottom:0;border-radius:60px"></div></div>`, 540, 1060, 880, 130);
+const m1limitL = el(`<div style="width:14px;height:190px;background:#ff2e4d;border-radius:7px;box-shadow:0 0 24px #ff2e4d"></div>`, 540 - 430 + 258, 1060, 14, 190);
+const m1limitT = el(`<div class="anton red" style="font-size:54px">LIMIT?</div>`, 540 - 430 + 258, 930, 260, 70);
+const m1shards = [...Array(8)].map((_, i) => el(`<div style="width:${10 + hash(i) * 14}px;height:${24 + hash(i + 2) * 40}px;background:#ff2e4d"></div>`, 540 - 430 + 258, 1000 + i * 16, 40, 60));
+const m1num = el(`<div class="anton" style="font-size:230px;line-height:1"><span id="m1n">0</span><span style="font-size:120px"> g</span></div>`, 540, 1290, 900, 250);
+const m1study = el(`<div style="font-weight:900;font-size:56px;background:rgba(53,240,138,.14);border:4px solid #35f08a;border-radius:24px;padding:12px 28px">📄 2023 study: <span class="green">100 g</span> in one meal</div>`, 540, 925, 1000, 110);
+const m1arm = el(`<div style="font-size:150px">💪</div>`, 920, 1270, 200, 200);
+const m1chk = el(`<div style="font-size:150px">🍗</div>`, 160, 1270, 200, 200);
+function renderM1(t) {
+  const q = S.m1q, a = S.m1a, on = inW(t, "m1");
+  const all = [...Object.values(m1), m1gauge, m1limitL, m1limitT, m1num, m1study, m1arm, m1chk, ...m1shards];
+  if (!on) { all.forEach(d => set(d, { o: 0 })); return }
+  const { out } = baseAnim(m1, t, q, a, W.m1[1]);
+  const gIn = upIn(t, q.s + .5, .4, 200);
+  set(m1gauge, { ...gIn, o: gIn.o * out, y: gIn.y + mix(0, 160, eOut(lin(t, a.s + .5, a.s + .9))) });
+  const gy = mix(0, 160, eOut(lin(t, a.s + .5, a.s + .9)));
+  let g = 30 * eOut(lin(t, q.s + .9, q.e - .2));
+  const smash = a.s + 1.3;
+  const shake = t < q.e && t > q.s + .9 && g > 29 ? Math.sin(t * 90) * 5 : 0;
+  g += (100 - 30) * eOut(lin(t, smash, smash + 1.4));
+  const f = document.getElementById("m1fill");
+  f.style.width = (g / 100 * 100) + "%";
+  f.style.background = g > 31 ? "linear-gradient(90deg,#1fd476,#35f08a,#b6ffd6)" : "linear-gradient(90deg,#ff9f1a,#ffd23f)";
+  f.style.boxShadow = g > 31 ? "0 0 40px #35f08a" : "none";
+  const limO = (1 - lin(t, smash, smash + .1)) * gIn.o * out;
+  set(m1limitL, { o: limO, x: shake, y: gy });
+  set(m1limitT, { o: limO, y: gy - 10 + Math.sin(t * 8) * 6 });
+  m1shards.forEach((d, i) => {
+    const p = lin(t, smash, smash + 1.1);
+    set(d, { o: p > 0 && p < 1 ? (1 - p) * out : 0, x: (hash(i + 7) - .5) * 700 * eOut(p), y: gy - 40 + (-300 * (hash(i + 4)) * eOut(p) + 900 * p * p), r: p * 720 * (hash(i) - .5) });
+  });
+  const nIn = popIn(t, q.s + .9, .3, 1.6);
+  const pulse = 1 + .08 * Math.exp(-Math.pow((t - smash - 1.4) * 5, 2));
+  set(m1num, { o: nIn.o * out, s: nIn.s * pulse, y: gy + 40 });
+  document.getElementById("m1n").textContent = Math.round(g);
+  m1num.style.color = g > 31 ? "#35f08a" : "#ffd23f";
+  set(m1study, { ...upIn(t, a.s + 1.0, .4), o: upIn(t, a.s + 1.0).o * out, y: upIn(t, a.s + 1.0).y + 30 });
+  const armIn = popIn(t, a.s + 3.4, .35, 0.2);
+  set(m1arm, { o: armIn.o * out, s: armIn.s * (1 + .12 * Math.sin(t * 9)), r: Math.sin(t * 7) * 10, y: 60 });
+  const chkIn = popIn(t, q.s + 1.0, .35, .2);
+  set(m1chk, { o: chkIn.o * out, s: chkIn.s, r: Math.sin(t * 5) * 12, y: gy - 20 });
+}
+
+// M2: spinning clock + burger -> balance scale
+const m2 = mythBase(2, "Eating <span class='red'>late</span> makes you fat");
+const m2clock = el(`<svg width="440" height="440" viewBox="-110 -110 220 220">
+ <circle r="100" fill="#141926" stroke="#ffd23f" stroke-width="9"/>
+ ${[...Array(12)].map((_, i) => `<line x1="0" y1="-86" x2="0" y2="-74" stroke="#fff" stroke-width="6" transform="rotate(${i * 30})"/>`).join("")}
+ <line id="hh" x1="0" y1="8" x2="0" y2="-50" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+ <line id="mh" x1="0" y1="10" x2="0" y2="-80" stroke="#ff2e4d" stroke-width="7" stroke-linecap="round"/>
+ <circle r="9" fill="#ffd23f"/></svg>`, 540, 1110, 440, 440);
+const m2time = el(`<div class="anton yellow" style="font-size:110px"><span id="m2t">18:00</span> 🌙</div>`, 540, 1400, 700, 140);
+const m2burger = el(`<div style="font-size:170px">🍔</div>`, 880, 900, 220, 220);
+const m2beam = el(`<div style="position:relative;width:860px;height:26px;background:#ffd23f;border-radius:13px;box-shadow:0 0 30px rgba(255,210,63,.5)">
+ <div style="position:absolute;left:-10px;top:26px;width:260px;text-align:center;font-weight:900;font-size:48px;line-height:1.1">🍝🍔🥗<br>CALORIES<br><span class="green">IN</span></div>
+ <div style="position:absolute;right:-10px;top:26px;width:260px;text-align:center;font-weight:900;font-size:48px;line-height:1.1">🏃🔥💤<br>CALORIES<br><span class="red">OUT</span></div></div>`, 540, 1040, 860, 26);
+const m2post = el(`<div style="width:30px;height:300px;background:linear-gradient(#ffd23f,#8a6a00);clip-path:polygon(35% 0,65% 0,100% 100%,0 100%)"></div>`, 540, 1190, 60, 300);
+const m2txt = el(`<div class="anton" style="font-size:96px;line-height:1.05">the <span class="green">daily total</span> wins<br><span style="font-size:74px;opacity:.85">the clock doesn't care ⏰</span></div>`, 540, 1395, 1000, 220);
+function renderM2(t) {
+  const q = S.m2q, a = S.m2a, on = inW(t, "m2");
+  const all = [...Object.values(m2), m2clock, m2time, m2burger, m2beam, m2post, m2txt];
+  if (!on) { all.forEach(d => set(d, { o: 0 })); return }
+  const { out } = baseAnim(m2, t, q, a, W.m2[1]);
+  const cOut = 1 - lin(t, a.s + .4, a.s + .7);
+  const cIn = popIn(t, q.s + .35, .35, .3);
+  set(m2clock, { o: cIn.o * cOut * out, s: cIn.s * mix(1, .4, eIn(1 - cOut)), r: 0 });
+  const hrs = 18 + 5 * eOut(lin(t, q.s + .5, q.e + .1));
+  document.getElementById("mh").setAttribute("transform", `rotate(${hrs * 360})`);
+  document.getElementById("hh").setAttribute("transform", `rotate(${hrs * 30})`);
+  const hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60);
+  document.getElementById("m2t").textContent = `${hh}:${String(mm).padStart(2, "0")}`;
+  const tIn = upIn(t, q.s + .5, .35);
+  set(m2time, { ...tIn, o: tIn.o * cOut * out });
+  const bIn = lin(t, q.s + 1.1, q.s + 1.6);
+  set(m2burger, { o: bIn > 0 ? cOut * out : 0, x: mix(400, 0, eBack(bIn)), r: mix(90, -8, eOut(bIn)) + Math.sin(t * 6) * 6, s: 1 + .06 * Math.sin(t * 10) });
+  const scIn = upIn(t, a.s + .7, .45, 200);
+  const wob = eEl(lin(t, a.s + .7, a.s + 2.6));
+  const tilt = mix(-16, 0, wob);
+  set(m2beam, { ...scIn, o: scIn.o * out, r: tilt });
+  set(m2post, { ...scIn, o: scIn.o * out });
+  const txIn = upIn(t, a.s + 1.2, .4);
+  set(m2txt, { ...txIn, o: txIn.o * out });
+}
+
+// M3: glitching kidney warning -> big green 0
+const m3 = mythBase(3, "High protein <span class='red'>destroys</span> your kidneys");
+const m3warn = el(`<div style="font-size:300px;line-height:1">⚠️</div>`, 540, 1090, 400, 360);
+const m3glitch = el(`<div class="anton" style="font-size:120px;position:relative">KIDNEY DAMAGE?!</div>`, 540, 1380, 1000, 170);
+const m3zero = el(`<div class="anton green" style="font-size:330px;line-height:1;text-shadow:0 0 60px rgba(53,240,138,.6)">0</div>`, 540, 1040, 500, 360);
+const m3ev = el(`<div style="font-weight:900;font-size:62px;line-height:1.15">evidence of harm<br>in <span class="green">healthy people</span></div>`, 540, 1280, 1000, 160);
+const m3kg = el(`<div class="anton" style="font-size:88px;background:#35f08a;color:#062a14;padding:4px 36px;border-radius:20px">even at 2 g / kg ✅</div>`, 540, 1420, 1000, 140);
+function renderM3(t) {
+  const q = S.m3q, a = S.m3a, on = inW(t, "m3");
+  const all = [...Object.values(m3), m3warn, m3glitch, m3zero, m3ev, m3kg];
+  if (!on) { all.forEach(d => set(d, { o: 0 })); return }
+  const { out } = baseAnim(m3, t, q, a, W.m3[1]);
+  const wOut = 1 - lin(t, a.s + .4, a.s + .65);
+  const wIn = popIn(t, q.s + .4, .3, .2);
+  const flick = hash(Math.floor(t * 24)) > .85 ? .35 : 1;
+  set(m3warn, { o: wIn.o * wOut * out * flick, s: wIn.s * (1 + .07 * Math.sin(t * 16)) });
+  const gIn = upIn(t, q.s + 1.1, .3);
+  const jx = (hash(Math.floor(t * 30)) - .5) * 22;
+  set(m3glitch, { ...gIn, o: gIn.o * wOut * out, x: jx });
+  m3glitch.style.textShadow = `${6 + jx / 2}px 0 #ff2e4d, ${-6 - jx / 2}px 0 #2ee9ff`;
+  const zIn = popIn(t, a.s + .75, .35, 3);
+  set(m3zero, { o: zIn.o * out, s: zIn.s * (1 + .03 * Math.sin(t * 9)) });
+  const eIn_ = upIn(t, a.s + 1.1, .4);
+  set(m3ev, { ...eIn_, o: eIn_.o * out });
+  const kIn = popIn(t, a.s + 2.1, .3, 1.8);
+  set(m3kg, { o: kIn.o * out, s: kIn.s, r: -2 });
+}
+
+// TWIST
+const twQ = el(`<div class="anton" style="font-size:130px;line-height:1.02">THE <span class="yellow">REAL</span><br>PROBLEM?</div>`, 540, 560, 1000, 300);
+const twG = el(`<div class="anton red" style="font-size:150px;line-height:1">YOU'RE<br>GUESSING 🤷</div>`, 540, 1020, 1060, 360);
+const twNums = [...Array(9)].map((_, i) => el(`<div class="anton" style="font-size:${60 + hash(i) * 50}px;color:rgba(255,255,255,.8)">?</div>`, 120 + hash(i + 11) * 840, 300 + hash(i + 21) * 1100, 300, 120));
+function renderTwist(t) {
+  const on = inW(t, "twist");
+  if (!on) { [twQ, twG, ...twNums].forEach(d => set(d, { o: 0 })); return }
+  const s = S.twist;
+  const out = outAt(t, W.twist[1] - .2, .2);
+  const qIn = popIn(t, s.s + .05, .3, 2.5);
+  set(twQ, { o: qIn.o * out, s: qIn.s });
+  const gT = s.s + (s.ve - s.vs) * .45 + s.vs;
+  const gIn = popIn(t, gT, .3, 2.6);
+  set(twG, { o: gIn.o * out, s: gIn.s, r: Math.sin(t * 20) * 2 * lin(t, gT, gT + .3) });
+  twNums.forEach((d, i) => {
+    const t0 = gT + i * .07;
+    const p = lin(t, t0, t0 + 1.4);
+    const vals = ["87g?", "140g?", "60g?", "?", "112g?", "??", "95g?", "?", "70g?"];
+    d.firstChild.textContent = vals[i];
+    set(d, { o: p > 0 ? Math.min(1, p * 4) * out * .9 : 0, y: -60 + 140 * p, r: (hash(i) - .5) * 40, s: .6 + .6 * eBack(clamp(p * 2.5)) });
+  });
+}
+
+// APP
+const phone = el(`<div class="phone" style="position:relative;overflow:hidden">
+  <div style="position:absolute;top:22px;left:50%;margin-left:-80px;width:160px;height:40px;background:#000;border-radius:20px"></div>
+  <div style="position:absolute;top:96px;left:0;right:0;text-align:center;font-family:Anton;font-size:56px;letter-spacing:.04em">PUMPY <span style="color:#ffd23f">AI</span></div>
+  <div style="position:absolute;top:170px;left:0;right:0;text-align:center;font-weight:700;font-size:28px;color:#8b93a7">TODAY</div>
+  <svg style="position:absolute;top:230px;left:60px" width="452" height="452" viewBox="-120 -120 240 240">
+   <circle r="100" fill="none" stroke="#1f2533" stroke-width="22"/>
+   <circle id="ring" r="100" fill="none" stroke="url(#gr)" stroke-width="22" stroke-linecap="round" transform="rotate(-90)" stroke-dasharray="628.3" stroke-dashoffset="628.3"/>
+   <defs><linearGradient id="gr" x1="0" x2="1"><stop offset="0" stop-color="#ffd23f"/><stop offset="1" stop-color="#35f08a"/></linearGradient></defs>
+  </svg>
+  <div style="position:absolute;top:350px;left:0;right:0;text-align:center"><div style="font-family:Anton;font-size:130px;line-height:1" id="pg">0</div><div style="font-weight:800;font-size:32px;color:#8b93a7">/ 160 g PROTEIN</div></div>
+  <div style="position:absolute;top:730px;left:50px;right:50px;font-weight:800;font-size:30px;color:#8b93a7;display:flex;justify-content:space-between"><span>CALORIES</span><span id="kc" style="color:#fff">0 / 2,400</span></div>
+  <div style="position:absolute;top:780px;left:50px;right:50px;height:26px;background:#1f2533;border-radius:13px;overflow:hidden"><div id="kb" style="height:100%;width:0;background:linear-gradient(90deg,#ff9f1a,#ffd23f);border-radius:13px"></div></div>
+  <div id="log" style="position:absolute;top:840px;left:50px;right:50px;font-weight:700;font-size:30px;line-height:1.6"></div>
+ </div>`, 540, 900, 628, 1148);
+const FOOD = [["🥚", "3 Eggs", 18, 234], ["🍗", "Chicken", 35, 248], ["🥛", "Milk", 8, 160], ["🥩", "Beef", 46, 380], ["🥤", "Whey", 24, 120], ["🐟", "Tuna", 30, 130]];
+const chips = FOOD.map((f, i) => el(`<div class="food">${f[0]} ${f[1]} <b>+${f[2]} g</b></div>`, 540, 900, 600, 120));
+const goal = el(`<div class="anton" style="font-size:120px;background:#35f08a;color:#062a14;padding:6px 44px;border-radius:26px;box-shadow:0 0 60px rgba(53,240,138,.7)">GOAL HIT 🔥</div>`, 540, 1400, 900, 180);
+const confetti = [...Array(60)].map((_, i) => el(`<div style="width:${14 + hash(i) * 14}px;height:${22 + hash(i + 1) * 20}px;background:${["#ffd23f", "#35f08a", "#ff2e4d", "#2ee9ff", "#fff"][i % 5]};border-radius:4px"></div>`, 540, 900, 30, 44));
+function renderApp(t) {
+  const on = inW(t, "app") || inW(t, "cta");
+  const inApp = inW(t, "app");
+  if (!on) { [phone, goal, ...chips].forEach(d => set(d, { o: 0 })); confettiRender(t); return }
+  const s = S.app;
+  const pIn = lin(t, s.s - .05, s.s + .5);
+  const toCta = lin(t, S.cta.s - .1, S.cta.s + .4);
+  set(phone, { o: 1 - toCta, y: mix(1300, 0, eBack(pIn)) + 700 * eIn(toCta), r: mix(-8, 0, eOut(pIn)), s: 1 });
+  let g = 0, k = 0; const log = [];
+  TL.chips.forEach((ct, i) => {
+    const p = lin(t, ct - .45, ct);
+    const side = i % 2 ? 1 : -1;
+    const d = chips[i];
+    if (!inApp || p <= 0 || t > ct + .12) set(d, { o: 0 });
+    else set(d, { o: 1, x: mix(side * 700, 0, eOut(p)), y: mix(-620 + i * 90, -60, eIn(p)), s: mix(1.1, .35, eIn(p)), r: side * mix(-14, 0, p) });
+    if (t >= ct) { g += FOOD[i][2]; k += FOOD[i][3]; log.push(`${FOOD[i][0]} ${FOOD[i][1]} <span style="float:right;color:#35f08a">+${FOOD[i][2]} g</span>`) }
+  });
+  // animate counters smoothly toward target
+  const prev = TL.chips.filter(ct => t >= ct).length;
+  const lastT = prev ? TL.chips[prev - 1] : 0;
+  const sm = prev ? eOut(lin(t, lastT, lastT + .35)) : 1;
+  const gPrev = FOOD.slice(0, Math.max(0, prev - 1)).reduce((a, f) => a + f[2], 0);
+  const kPrev = FOOD.slice(0, Math.max(0, prev - 1)).reduce((a, f) => a + f[3], 0);
+  const gv = prev ? mix(gPrev, g, sm) : 0, kv = prev ? mix(kPrev, k, sm) : 0;
+  document.getElementById("pg").textContent = Math.round(gv);
+  document.getElementById("pg").style.color = gv >= 160 ? "#35f08a" : "#fff";
+  document.getElementById("ring").setAttribute("stroke-dashoffset", 628.3 * (1 - Math.min(1, gv / 160)));
+  document.getElementById("kc").textContent = `${Math.round(kv).toLocaleString("en")} / 2,400`;
+  document.getElementById("kb").style.width = (kv / 2400 * 100) + "%";
+  document.getElementById("log").innerHTML = log.slice(-3).join("<br>");
+  const gIn = popIn(t, TL.goal, .35, 2.6);
+  set(goal, { o: gIn.o * (1 - toCta), s: gIn.s * (1 + .05 * Math.sin(t * 12)), r: -3 });
+  confettiRender(t);
+}
+function confettiRender(t) {
+  const bursts = [TL.goal, S.cta.s];
+  confetti.forEach((d, i) => {
+    const b = bursts[i % 2];
+    const p = (t - b) / 2.6;
+    if (p <= 0 || p >= 1) { set(d, { o: 0 }); return }
+    const ang = hash(i + 50) * Math.PI * 2, v = 500 + hash(i + 60) * 900;
+    const ox = i % 2 ? 0 : 0, oy = i % 2 ? -200 : 660;
+    set(d, { o: 1 - lin(p, .7, 1), x: ox + Math.cos(ang) * v * eOut(clamp(p * 1.6)), y: oy + Math.sin(ang) * v * .7 * eOut(clamp(p * 1.6)) + 1400 * p * p, r: p * 900 * (hash(i + 3) - .5) * 2 });
+  });
+}
+
+// CTA
+const ctaLogo = el(`<div class="anton" style="font-size:250px;line-height:1;background:linear-gradient(180deg,#fff 20%,#ffd23f 90%);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 10px 0 #7a5b00)">PUMPY<br>AI</div>`, 540, 620, 1000, 520);
+const ctaMuscle = el(`<div style="font-size:170px">💪</div>`, 540, 250, 240, 240);
+const ctaSub = el(`<div class="anton" style="font-size:96px;line-height:1.1">stop guessing.<br><span class="green">start growing.</span></div>`, 540, 1040, 1000, 240);
+const ctaBtn = el(`<div class="anton" style="font-size:96px;background:#ffd23f;color:#111;padding:14px 60px;border-radius:80px;box-shadow:0 0 80px rgba(255,210,63,.7)">DOWNLOAD NOW ⬇</div>`, 540, 1300, 1000, 170);
+function renderCta(t) {
+  const on = inW(t, "cta");
+  if (!on) { [ctaLogo, ctaMuscle, ctaSub, ctaBtn].forEach(d => set(d, { o: 0 })); return }
+  const s = S.cta;
+  const lIn = popIn(t, s.s, .35, 3);
+  const beatP = Math.exp(-Math.pow(((t - TL.beat0) % (60 / TL.bpm)) * 7, 2));
+  set(ctaLogo, { o: lIn.o, s: lIn.s * (1 + .04 * beatP) });
+  const mIn = popIn(t, s.s + .3, .35, .2);
+  set(ctaMuscle, { o: mIn.o, s: mIn.s, r: Math.sin(t * 8) * 12 });
+  const subIn = upIn(t, s.s + .2, .4);
+  set(ctaSub, subIn);
+  const bIn = popIn(t, s.s + 1.4, .35, 2);
+  set(ctaBtn, { o: bIn.o, s: bIn.s * (1 + .06 * beatP) });
+}
+
+// HOOK render
+function renderHook(t) {
+  const on = inW(t, "hook");
+  if (!on) { [hStop, hHand, hBar, hKill].forEach(d => set(d, { o: 0 })); return }
+  const s = S.hook, out = outAt(t, W.hook[1] - .25);
+  const sIn = popIn(t, s.s - .02, .22, 4);
+  set(hStop, { o: sIn.o * out, s: sIn.s * (1 + .03 * Math.sin(t * 30) * (1 - lin(t, s.s, s.s + .8))) });
+  const hIn = popIn(t, s.s + .15, .3, .2);
+  set(hHand, { o: hIn.o * out, s: hIn.s, r: Math.sin(t * 10) * 10 });
+  const bT = s.s + s.vs + (s.ve - s.vs) * .12;
+  const bIn = lin(t, bT, bT + .3);
+  set(hBar, { o: clamp(bIn * 3) * out, x: mix(-1100, 0, eOut(bIn)), r: -2 });
+  const kT = s.s + s.vs + (s.ve - s.vs) * .62;
+  const kIn = popIn(t, kT, .3, 1.8);
+  set(hKill, { o: kIn.o * out, s: kIn.s });
+}
+
+// ---------- captions (word by word) ----------
+const WORDS = [];
+const HL = /^(stop|three|myths?|killing|gains|thirty|wrong|2023|hundred|nope|calories|clock|destroys|kidneys|healthy|no|evidence|two|real|guessing|pumpy|ai|every|gram|growing|download|late|fat|decide)$/i;
+TL.segs.forEach(s => {
+  const ws = s.text.split(/\s+/);
+  const wt = ws.map(w => Math.max(1, (w.replace(/[^a-z0-9]/gi, "").match(/[aeiouy]+/gi) || [1]).length) + .6 + (/[,:]$/.test(w) ? 1.3 : /[.!?]$/.test(w) ? 2.0 : 0));
+  const tot = wt.reduce((a, b) => a + b, 0);
+  let acc = 0; const span = s.ve - s.vs;
+  ws.forEach((w, i) => { WORDS.push({ w, t: s.s + s.vs + span * acc / tot, seg: s.id, i }); acc += wt[i] });
+});
+// chunk into groups of max 3 words, breaking on punctuation
+const GROUPS = []; let cur = [];
+WORDS.forEach((w, i) => {
+  cur.push(w);
+  const nxt = WORDS[i + 1];
+  if (cur.length >= 3 || /[.!?,:]$/.test(w.w) || !nxt || nxt.seg !== w.seg) { GROUPS.push(cur); cur = [] }
+});
+let lastG = -1;
+function renderCap(t) {
+  let gi = -1;
+  for (let i = 0; i < GROUPS.length; i++) if (GROUPS[i][0].t <= t + .02) gi = i;
+  const cap = $("cap");
+  if (gi < 0) { cap.innerHTML = ""; return }
+  const G = GROUPS[gi];
+  const lastW = G[G.length - 1];
+  const segEnd = S[lastW.seg].e;
+  if (t > segEnd + .15) { cap.innerHTML = ""; return }
+  if (gi !== lastG) { cap.innerHTML = G.map(w => `<span>${w.w.replace(/[<>&]/g, "")}</span>`).join(""); lastG = gi }
+  [...cap.children].forEach((sp, i) => {
+    const w = G[i], p = lin(t, w.t - .02, w.t + .12);
+    const active = t >= w.t && (i === G.length - 1 || t < G[i + 1].t);
+    sp.style.opacity = p > 0 ? 1 : .0;
+    sp.style.transform = `scale(${p > 0 ? mix(1.35, active ? 1.08 : 1, eOut(p)) : .6}) translateY(${active ? -4 : 0}px)`;
+    sp.style.color = HL.test(w.w.replace(/[^a-z0-9]/gi, "")) ? (active ? "#ffd23f" : "#ffd23f") : (active ? "#fff" : "#e8e8e8");
+  });
+}
+
+// ---------- background + global fx ----------
+function sceneHue(t) {
+  if (inW(t, "hook")) return [255, 46, 77];
+  for (const m of ["m1", "m2", "m3"]) if (inW(t, m)) return t >= S[m + "a"].s ? [53, 240, 138] : [255, 46, 77];
+  if (inW(t, "twist")) return [255, 120, 40];
+  if (inW(t, "app")) return [60, 140, 255];
+  return [255, 210, 63];
+}
+let hueCur = [255, 46, 77];
+function renderBg(t) {
+  const target = sceneHue(t);
+  hueCur = target; // deterministic per frame
+  const beat = 60 / TL.bpm;
+  const bp = Math.exp(-(((t - TL.beat0) % beat + beat) % beat) * 9);
+  const breakdown = inW(t, "twist");
+  const [r, g, b] = hueCur;
+  $("glow").style.background = `radial-gradient(circle, rgba(${r},${g},${b},${(breakdown ? .18 : .26) + (breakdown ? 0 : .12) * bp}) 0%, rgba(${r},${g},${b},0) 60%)`;
+  $("bg").style.background = `radial-gradient(ellipse at 50% 30%, rgb(${22 + r * .05},${22 + g * .05},${34 + b * .05}), #06070b 75%)`;
+  $("grid").style.transform = `perspective(900px) rotateX(58deg) translateY(${(t * 160) % 120}px) scale(${1 + .015 * bp})`;
+  $("grid").style.transformOrigin = "50% 100%";
+  parts.forEach((p, i) => {
+    const y = 1920 - ((t * p.sp + p.ph) % 2100);
+    p.d.style.transform = `translate(${p.x + Math.sin(t + i) * 30}px,${y}px)`;
+    p.d.style.background = `rgba(${r},${g},${b},${.25 + .35 * hash(i + 1)})`;
+  });
+  // flash + shake on hits
+  let fl = 0, sh = 0;
+  HITS.forEach(h => { const d = t - h; if (d >= 0 && d < .5) { fl = Math.max(fl, Math.exp(-d * 14) * .7); sh = Math.max(sh, Math.exp(-d * 9)) } });
+  $("flash").style.opacity = fl;
+  const zoom = 1 + .012 * bp * (breakdown ? 0 : 1);
+  stage.style.transform = `translate(${Math.sin(t * 97) * 26 * sh}px,${Math.cos(t * 83) * 22 * sh}px) scale(${zoom})`;
+  $("cap").style.transform = `translate(${Math.sin(t * 97) * 14 * sh}px,0)`;
+}
+
+function renderTop(t) {
+  const n = inW(t, "m1") ? 1 : inW(t, "m2") ? 2 : inW(t, "m3") ? 3 : 0;
+  if (!n) { set(topBar, { o: 0 }); return }
+  set(topBar, { o: lin(t, W.m1[0], W.m1[0] + .3) * outAt(t, W.m3[1] - .2) });
+  [...topBar.querySelectorAll("i")].forEach((d, i) => d.className = i < n ? "on" : "");
+}
+
+window.renderAt = t => {
+  renderBg(t); renderTop(t); renderHook(t); renderM1(t); renderM2(t); renderM3(t); renderTwist(t); renderApp(t); renderCta(t); renderCap(t);
+};
+window.ready = document.fonts.ready.then(() => { renderAt(0); return true });
+</script></body></html>

@@ -1,0 +1,326 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Anton;src:url(fonts/Anton.ttf)}
+@font-face{font-family:Mont;src:url(fonts/Montserrat.ttf);font-weight:100 900}
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#061226}
+#v{position:absolute;inset:0;overflow:hidden;font-family:Mont,sans-serif;color:#fff}
+.l{position:absolute;left:0;top:0;transform-origin:50% 50%}
+.c{display:flex;align-items:center;justify-content:center;text-align:center}
+.anton{font-family:Anton,Impact,sans-serif;text-transform:uppercase}
+#bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,#15407e,#061226 72%)}
+#rauten{position:absolute;left:-600px;top:-600px;width:2400px;height:3200px;opacity:.055;
+ background-image:linear-gradient(45deg,#fff 25%,transparent 25%,transparent 75%,#fff 75%),linear-gradient(45deg,#fff 25%,transparent 25%,transparent 75%,#fff 75%);
+ background-size:140px 140px;background-position:0 0,70px 70px}
+#glow{position:absolute;left:540px;top:800px;width:1600px;height:1600px;margin:-800px;border-radius:50%}
+#vign{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 50%,rgba(0,0,0,.7) 100%)}
+#flash{position:absolute;inset:0;background:#fff;pointer-events:none}
+#lights{position:absolute;left:0;top:0;width:1080px;height:240px}
+.cap{position:absolute;left:50px;right:50px;top:1520px;height:250px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:0}
+.cap span{font-family:Mont;font-weight:900;font-size:78px;line-height:1.15;display:inline-block;-webkit-text-stroke:10px #000;paint-order:stroke fill;text-transform:uppercase;margin:0 .38em}
+.receipt{width:720px;background:#fbf8f1;color:#1a1a1a;font-family:"DejaVu Sans Mono",monospace;font-size:38px;padding:34px 44px 30px;box-sizing:border-box;box-shadow:0 30px 80px rgba(0,0,0,.6);
+ -webkit-mask:linear-gradient(#000,#000) top/100% calc(100% - 22px) no-repeat,radial-gradient(circle at 18px 0,transparent 17px,#000 18px) bottom/36px 22px repeat-x}
+.receipt .row{display:flex;justify-content:space-between;white-space:nowrap;line-height:1.75}
+.receipt .dash{border-top:5px dashed #999;margin:14px 0}
+.chip{font-weight:900;font-size:56px;background:#fff;color:#111;border-radius:60px;padding:10px 30px;white-space:nowrap;box-shadow:0 14px 40px rgba(0,0,0,.45)}
+.yellow{color:#ffd23f}.green{color:#35f08a}.red{color:#ff2e4d}.blue{color:#6fc3ff}
+</style></head>
+<body><div id="v">
+ <div id="bg"><div id="rauten"></div><div id="glow"></div></div>
+ <svg id="lights" viewBox="0 0 1080 240"></svg>
+ <div id="stage" class="l" style="width:1080px;height:1920px"></div>
+ <div id="vign"></div>
+ <div class="cap" id="cap"></div>
+ <div id="flash"></div>
+</div>
+<script>
+const TL = window.TL, S = {}; TL.segs.forEach(s => S[s.id] = s);
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lin = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = x => 1 - Math.pow(1 - x, 3), eIn = x => x * x * x;
+const eBack = x => { const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2) };
+const eEl = x => x === 0 || x === 1 ? x : Math.pow(2, -9 * x) * Math.sin((x * 10 - .75) * 2.1) + 1;
+const mix = (a, b, x) => a + (b - a) * x;
+const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x) };
+const fmt = n => Math.round(n).toLocaleString("en");
+const stage = $("stage");
+function el(html, x, y, w, h, cls = "") {
+  const d = document.createElement("div"); d.className = "l c " + cls; d.innerHTML = html;
+  Object.assign(d.style, { width: w + "px", height: h + "px" }); d._x = x; d._y = y; d._w = w; d._h = h; stage.appendChild(d); return d;
+}
+function set(d, { o = 1, x = 0, y = 0, s = 1, r = 0, sx = null } = {}) {
+  if (o <= .001) { d.style.display = "none"; return }
+  d.style.display = ""; d.style.opacity = Math.min(1, o);
+  d.style.transform = `translate(${d._x - d._w / 2 + x}px,${d._y - d._h / 2 + y}px) rotate(${r}deg) scale(${sx ?? s},${s})`;
+}
+const popIn = (t, t0, d = .35, from = 2.2) => { const p = lin(t, t0, t0 + d); return { o: clamp(p * 3), s: mix(from, 1, eOut(p)) } };
+const upIn = (t, t0, d = .4, dist = 120) => { const p = lin(t, t0, t0 + d); return { o: p, y: (1 - eOut(p)) * dist, s: mix(.85, 1, eBack(p)) } };
+const outAt = (t, t1, d = .25) => 1 - lin(t, t1, t1 + d);
+const hide = arr => arr.forEach(d => set(d, { o: 0 }));
+
+const W = {
+  hook: [0, S.i1.s - .1], receipt: [S.i1.s - .1, S.burn.s - .15], burn: [S.burn.s - .15, S.twist.s - .15],
+  twist: [S.twist.s - .15, S.cta.s - .1], cta: [S.cta.s - .1, TL.end + 1]
+};
+const inW = (t, k) => t >= W[k][0] && t < W[k][1];
+const CLINK = S.cta.e - .55;
+const HITS = [S.hook.s, S.total.s, S.twist.s + .05, CLINK];
+
+// ---------- festival string lights ----------
+const bulbs = [];
+(() => {
+  const svg = $("lights"); let h = "";
+  const strands = [[0, 30, 1080, 30, 110], [0, 90, 1080, 90, 90]];
+  strands.forEach(([x0, y0, x1, y1, sag], si) => {
+    h += `<path d="M${x0},${y0} Q540,${y0 + sag * 2} ${x1},${y1}" stroke="#222" stroke-width="4" fill="none"/>`;
+    for (let i = 1; i < 14; i++) {
+      const u = i / 14, x = mix(x0, x1, u), y = (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * (y0 + sag * 2) + u * u * y1;
+      h += `<circle id="b${si}_${i}" cx="${x}" cy="${y + 14}" r="11"/>`; bulbs.push([`b${si}_${i}`, si * 13 + i]);
+    }
+  });
+  svg.innerHTML = h;
+})();
+const BULBC = ["#ffd23f", "#ff5a5a", "#6fc3ff", "#35f08a", "#ff9f1a"];
+
+// ---------- HOOK ----------
+const hSmall = el(`<div class="anton" style="font-size:92px">one day at the</div>`, 540, 470, 1000, 130);
+const hBig = el(`<div class="anton" style="font-size:190px;line-height:1;background:linear-gradient(180deg,#fff 0 50%,#6fc3ff 50% 100%);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 10px 0 #0a2a5c) drop-shadow(0 0 40px rgba(111,195,255,.5))">OKTOBERFEST</div>`, 540, 640, 1060, 240);
+const hQ = el(`<div class="anton" style="font-size:84px;white-space:nowrap;background:#ffd23f;color:#111;padding:4px 36px;border-radius:20px">what it REALLY costs 👀</div>`, 540, 860, 1040, 160);
+const hEmo = ["🍺", "🥨", "🍗", "🎡", "🍖", "🥜"].map((e, i) => el(`<div style="font-size:150px">${e}</div>`, 540, 1180, 200, 200));
+
+// ---------- RECEIPT ----------
+const ITEMS = [["i1", "3× MAß BEER", 1440, "🍺🍺🍺"], ["i2", "1× BREZN XXL", 450, "🥨"], ["i3", "½ HENDL", 700, "🍗"], ["i4", "1× SCHWEINSHAXE", 1300, "🍖"], ["i5", "ROASTED ALMONDS", 500, "🥜"]];
+const TOTAL = ITEMS.reduce((a, i) => a + i[2], 0);
+const printer = el(`<div style="width:820px;height:70px;border-radius:22px;background:linear-gradient(#3a3f4b,#1c1f26);box-shadow:0 16px 40px rgba(0,0,0,.6)"><div style="margin:30px auto 0;width:760px;height:12px;background:#000;border-radius:6px"></div></div>`, 540, 330, 820, 70);
+const receipt = el(`<div class="receipt" id="rc">
+  <div style="text-align:center;font-weight:700;font-size:44px">🎡 WIESN RECEIPT 🎡</div>
+  <div style="text-align:center;font-size:30px;color:#666">THERESIENWIESE · OCT 2026</div>
+  <div class="dash"></div>
+  ${ITEMS.map((it, i) => `<div class="row" id="r${i}"><span>${it[1]}</span><span>${fmt(it[2])}</span></div>`).join("")}
+  <div class="dash" id="rdash"></div>
+  <div class="row" id="rtot" style="font-weight:900;font-size:54px"><span>TOTAL</span><span>${fmt(TOTAL)} KCAL</span></div>
+ </div>`, 540, 0, 720, 900);
+receipt.style.alignItems = "flex-start"; receipt.style.overflow = "hidden";
+const counter = el(`<div class="chip" style="font-size:60px">🔥 <span id="kc">0</span> kcal</div>`, 540, 205, 700, 110);
+const itemEmo = ITEMS.map(it => el(`<div style="font-size:${it[3].length > 3 ? 140 : 220}px;white-space:nowrap">${it[3]}</div>`, 540, 1180, 800, 260));
+const ouch = el(`<div class="anton" style="font-size:150px;color:#ff2e4d;border:14px solid #ff2e4d;border-radius:26px;padding:0 36px;background:rgba(40,0,8,.35)">OUCH 😵</div>`, 700, 1150, 700, 230);
+const days = el(`<div class="chip">≈ <span class="red">2 full days</span> of calories</div>`, 540, 1390, 1000, 110);
+function lineY(n) { return 34 + 55 + 42 + 42 + n * 66 } // approx y of row n inside receipt
+function renderReceipt(t) {
+  const on = inW(t, "receipt");
+  if (!on) { hide([printer, receipt, counter, ouch, days, ...itemEmo]); return }
+  const out = 1 - lin(t, W.receipt[1] - .45, W.receipt[1] - .05);
+  const pIn = upIn(t, W.receipt[0], .35, -200);
+  set(printer, { ...pIn, o: pIn.o, y: pIn.y - 600 * eIn(1 - out) });
+  // how many rows printed
+  let shown = 0; ITEMS.forEach((it, i) => { if (t >= S[it[0]].s) shown = i + 1 });
+  const totOn = t >= S.total.s;
+  ITEMS.forEach((it, i) => {
+    const r = $("r" + i), p = lin(t, S[it[0]].s, S[it[0]].s + .3);
+    r.style.visibility = p > 0 ? "visible" : "hidden";
+    r.style.clipPath = `inset(0 ${100 - p * 100}% 0 0)`;
+    r.style.background = i === shown - 1 && !totOn ? "rgba(255,210,63,.45)" : "transparent";
+  });
+  $("rdash").style.visibility = totOn ? "visible" : "hidden";
+  const tp = lin(t, S.total.s, S.total.s + .25);
+  $("rtot").style.visibility = tp > 0 ? "visible" : "hidden"; $("rtot").style.clipPath = `inset(0 ${100 - tp * 100}% 0 0)`;
+  $("rtot").style.color = "#d1112f";
+  // paper length grows smoothly with printed content
+  const lastT = totOn ? S.total.s : shown ? S[ITEMS[shown - 1][0]].s : W.receipt[0];
+  const targetRows = totOn ? 5 + 2.2 : shown;
+  const prevRows = totOn ? 5 : Math.max(0, shown - 1);
+  const rows = mix(prevRows, targetRows, eOut(lin(t, lastT, lastT + .35)));
+  const hgt = 250 + rows * 66;
+  receipt.style.height = hgt + "px";
+  const tear = lin(t, W.receipt[1] - .5, W.receipt[1] - .05);
+  set(receipt, { o: 1 - lin(t, W.receipt[1] - .15, W.receipt[1] - .05), x: 1000 * eIn(tear), y: 810 - 400 * eIn(tear) + mix(-60, 0, eOut(lin(t, W.receipt[0], W.receipt[0] + .4))), r: 25 * eIn(tear) });
+  // running counter
+  let k = 0; ITEMS.forEach(it => { if (t >= S[it[0]].s) k += it[2] * eOut(lin(t, S[it[0]].s + .1, S[it[0]].s + .6)) });
+  $("kc").textContent = fmt(k);
+  const cIn = popIn(t, W.receipt[0] + .1, .3, 1.6);
+  const bump = 1 + .12 * Math.max(...ITEMS.map(it => Math.exp(-Math.pow((t - S[it[0]].s - .35) * 6, 2))), 0) + .2 * Math.exp(-Math.pow((t - S.total.s) * 5, 2));
+  set(counter, { o: cIn.o * out, s: cIn.s * bump });
+  $("kc").parentElement.style.background = t >= S.total.s ? "#ff2e4d" : "#fff"; $("kc").parentElement.style.color = t >= S.total.s ? "#fff" : "#111";
+  // item emojis slam in beside receipt bottom
+  ITEMS.forEach((it, i) => {
+    const s = S[it[0]], p = lin(t, s.s - .05, s.s + .3), q = lin(t, s.e - .05, s.e + .3);
+    const side = i % 2 ? 1 : -1;
+    if (p <= 0 || q >= 1 || totOn) { set(itemEmo[i], { o: 0 }); return }
+    set(itemEmo[i], { o: 1 - q, s: mix(3, 1, eOut(p)) * mix(1, .3, eIn(q)), x: side * mix(0, 60, p) + side * 300 * eIn(q), y: 80 + mix(0, 0, p) - 700 * eIn(q), r: side * mix(-30, 8, eOut(p)) + Math.sin(t * 14) * 4 });
+  });
+  const oIn = popIn(t, S.total.s + .9, .2, 3);
+  set(ouch, { o: oIn.o * out, s: oIn.s, r: -12, y: 20 });
+  const dIn = upIn(t, S.total.s + 1.9, .35);
+  set(days, { ...dIn, o: dIn.o * out });
+}
+
+// ---------- BURN (runner on marathon track) ----------
+const bTitle = el(`<div class="anton" style="font-size:120px;line-height:1">to burn it off 🔥</div>`, 540, 400, 1040, 160);
+const bKm = el(`<div class="anton" style="font-size:300px;line-height:1"><span id="km">0</span><span style="font-size:130px"> KM</span></div>`, 540, 700, 1000, 330);
+const TX0 = 110, TX1 = 970, TY = 1080;
+const track = el(`<div style="position:relative;width:${TX1 - TX0 + 60}px;height:120px">
+  <div style="position:absolute;left:30px;right:30px;top:52px;height:18px;border-radius:9px;background:#223a66"></div>
+  <div id="trk" style="position:absolute;left:30px;top:52px;height:18px;border-radius:9px;background:linear-gradient(90deg,#ffd23f,#ff5a5a)"></div>
+  ${[0, 10, 20, 30, 42, 55].map(k => `<div style="position:absolute;left:${30 + (TX1 - TX0) * k / 55 - 40}px;width:80px;top:84px;text-align:center;font-weight:900;font-size:30px;color:${k === 42 ? "#ffd23f" : "#9fb2d6"}">${k}</div>`).join("")}
+ </div>`, 540, TY, TX1 - TX0 + 60, 120);
+const flag = el(`<div style="font-size:90px">🏁</div>`, TX0 + (TX1 - TX0) * 42 / 55, TY - 90, 120, 120);
+const runner = el(`<div style="font-size:130px;transform:scaleX(-1)">🏃</div>`, TX0, TY - 90, 160, 160);
+const mara = el(`<div class="anton" style="font-size:92px;white-space:nowrap;background:#ffd23f;color:#111;padding:2px 34px;border-radius:18px">MARATHON ✓ +13 KM</div>`, 540, 1290, 1060, 140);
+const sweat = [...Array(6)].map((_, i) => el(`<div style="font-size:54px">💦</div>`, TX0, TY - 120, 80, 80));
+function renderBurn(t) {
+  const on = inW(t, "burn");
+  if (!on) { hide([bTitle, bKm, track, flag, runner, mara, ...sweat]); return }
+  const out = outAt(t, W.burn[1] - .25);
+  const [r0, r1] = TL.run;
+  const tIn = popIn(t, W.burn[0] + .1, .3, 2); set(bTitle, { o: tIn.o * out, s: tIn.s });
+  const p = eOut(lin(t, r0, r1)) * .25 + lin(t, r0, r1) * .75;
+  const km = 55 * p;
+  $("km").textContent = Math.round(km); $("km").parentElement.style.color = km >= 42 ? "#ffd23f" : "#fff";
+  const kIn = popIn(t, W.burn[0] + .25, .3, 1.8);
+  set(bKm, { o: kIn.o * out, s: kIn.s * (1 + .1 * Math.exp(-Math.pow((t - TL.marathon) * 6, 2))) });
+  const trIn = upIn(t, W.burn[0] + .3, .35); set(track, { ...trIn, o: trIn.o * out });
+  $("trk").style.width = ((TX1 - TX0) * p) + "px";
+  set(flag, { o: trIn.o * out, s: 1 + .5 * Math.exp(-Math.pow((t - TL.marathon) * 5, 2)), r: Math.sin(t * 8) * 8 });
+  const bob = Math.abs(Math.sin(t * 16)) * -22;
+  set(runner, { o: trIn.o * out, x: (TX1 - TX0) * p, y: bob, r: Math.sin(t * 16) * 5 });
+  sweat.forEach((d, i) => {
+    const ph = ((t * 2.2 + i / 6) % 1);
+    set(d, { o: t > r0 && t < r1 + .3 ? (1 - ph) * out : 0, x: (TX1 - TX0) * p - 40 - ph * 90, y: -40 - Math.sin(ph * Math.PI) * 60 + ph * 50, s: .6 + ph * .5 });
+  });
+  const mIn = popIn(t, TL.marathon, .3, 2.2); set(mara, { o: mIn.o * out, s: mIn.s, r: -2 });
+}
+
+// ---------- TWIST (protein goal smashed) ----------
+const twHey = el(`<div class="anton" style="font-size:170px;line-height:1">BUT HEY 😏</div>`, 540, 400, 1000, 200);
+const GY0 = 1250, GH = 640, GOAL = 140, GMAX = 160;
+const bar = el(`<div style="position:relative;width:260px;height:${GH}px;border-radius:40px;background:#16284a;border:8px solid #2e4a80;overflow:hidden"><div id="pb" style="position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,#1fd476,#35f08a,#b6ffd6)"></div></div>`, 360, GY0 - GH / 2 + 20, 276, GH + 16);
+const goalLine = el(`<div style="width:360px;height:12px;background:#ffd23f;border-radius:6px;box-shadow:0 0 20px #ffd23f"></div>`, 360, GY0 - GH * GOAL / GMAX + 20, 360, 12);
+const goalTxt = el(`<div class="anton yellow" style="font-size:52px">GOAL</div>`, 160, GY0 - GH * GOAL / GMAX - 20, 160, 70);
+const pNum = el(`<div class="anton" style="font-size:170px;line-height:1"><span id="pn">0</span><span style="font-size:80px"> g</span></div>`, 760, 820, 560, 200);
+const pLbl = el(`<div style="font-weight:900;font-size:50px;color:#9fb2d6">PROTEIN</div>`, 760, 940, 560, 70);
+const tHendl = el(`<div class="chip">🍗 Hendl <span class="green">+70 g</span></div>`, 760, 1070, 520, 110);
+const tHaxe = el(`<div class="chip">🍖 Haxe <span class="green">+75 g</span></div>`, 760, 1200, 520, 110);
+const smashed = el(`<div class="anton" style="font-size:118px;line-height:1.02;color:#062a14;background:#35f08a;padding:14px 40px;border-radius:26px;box-shadow:0 0 60px rgba(53,240,138,.7)">PROTEIN GOAL:<br>SMASHED 💪</div>`, 540, 1100, 900, 300);
+function renderTwist(t) {
+  const on = inW(t, "twist");
+  if (!on) { hide([twHey, bar, goalLine, goalTxt, pNum, pLbl, tHendl, tHaxe, smashed]); return }
+  const s = S.twist, out = outAt(t, W.twist[1] - .25);
+  const hIn = popIn(t, s.s + .02, .3, 3); set(twHey, { o: hIn.o * out, s: hIn.s, r: Math.sin(t * 6) * 3 });
+  const span = s.ve - s.vs, at = f => s.s + s.vs + span * f;
+  const tH = at(.2), tX = at(.34), tS = at(.72);
+  const bIn = upIn(t, s.s + .35, .4, 300);
+  const hideSm = 1 - lin(t, tS - .15, tS + .1);
+  [bar, goalLine, goalTxt, pNum, pLbl].forEach(d => set(d, { ...bIn, o: bIn.o * out * hideSm }));
+  const g = 70 * eOut(lin(t, tH, tH + .6)) + 75 * eOut(lin(t, tX, tX + .6));
+  $("pb").style.height = (g / GMAX * 100) + "%"; $("pn").textContent = Math.round(g);
+  $("pn").parentElement.style.color = g >= GOAL ? "#35f08a" : "#fff";
+  const h1 = popIn(t, tH, .3, 1.8), h2 = popIn(t, tX, .3, 1.8);
+  set(tHendl, { o: h1.o * out * hideSm, s: h1.s, r: -3 }); set(tHaxe, { o: h2.o * out * hideSm, s: h2.s, r: 3 });
+  const smIn = popIn(t, tS, .3, 3);
+  set(smashed, { o: smIn.o * out, s: smIn.s * (1 + .04 * Math.sin(t * 12)), r: -4 });
+}
+
+// ---------- CTA ----------
+const ctaLogo = el(`<div class="anton" style="font-size:230px;line-height:1;background:linear-gradient(180deg,#fff 20%,#ffd23f 90%);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 10px 0 #7a5b00)">PUMPY AI</div>`, 540, 420, 1060, 260);
+const ctaSub = el(`<div class="anton" style="font-size:88px;line-height:1.1">enjoy the wiesn.<br><span class="blue">track the wiesn.</span></div>`, 540, 640, 1000, 220);
+const mugL = el(`<div style="font-size:300px">🍺</div>`, 380, 1020, 360, 360);
+const mugR = el(`<div style="font-size:300px;transform:scaleX(-1)">🍺</div>`, 700, 1020, 360, 360);
+const prost = el(`<div class="anton yellow" style="font-size:210px;line-height:1;text-shadow:0 0 40px rgba(255,210,63,.7),0 10px 0 #7a5b00">PROST! 🍻</div>`, 540, 1270, 1060, 250);
+const btn = el(`<div class="anton" style="font-size:84px;background:#ffd23f;color:#111;padding:12px 56px;border-radius:80px;box-shadow:0 0 70px rgba(255,210,63,.7)">DOWNLOAD NOW ⬇</div>`, 540, 1430, 1000, 150);
+const foam = [...Array(18)].map((_, i) => el(`<div style="width:${20 + hash(i) * 30}px;height:${20 + hash(i) * 30}px;border-radius:50%;background:#fffbe8"></div>`, 540, 960, 50, 50));
+const pretz = [...Array(26)].map((_, i) => el(`<div style="font-size:${60 + hash(i + 3) * 50}px">${["🥨", "🎉", "💙", "🥨", "🍺"][i % 5]}</div>`, 100 + hash(i + 9) * 880, -120, 120, 120));
+function renderCta(t) {
+  const on = inW(t, "cta");
+  if (!on) { hide([ctaLogo, ctaSub, mugL, mugR, prost, btn, ...foam, ...pretz]); return }
+  const s = S.cta;
+  const beatP = Math.exp(-Math.pow((((t - TL.beat0) % (60 / TL.bpm)) + 60 / TL.bpm) % (60 / TL.bpm) * 7, 2));
+  const lIn = popIn(t, s.s, .35, 3); set(ctaLogo, { o: lIn.o, s: lIn.s * (1 + .04 * beatP) });
+  set(ctaSub, upIn(t, s.s + .3, .4));
+  const mp = lin(t, s.s + .2, CLINK);
+  const approach = eIn(mp);
+  const bounce = t > CLINK ? Math.sin((t - CLINK) * 18) * Math.exp(-(t - CLINK) * 6) : 0;
+  set(mugL, { o: lin(t, s.s + .1, s.s + .3), x: mix(-520, 0, approach) - bounce * 40, r: mix(-10, 22, approach) - bounce * 10 });
+  set(mugR, { o: lin(t, s.s + .1, s.s + .3), x: mix(520, 0, approach) + bounce * 40, r: mix(10, -22, approach) + bounce * 10 });
+  foam.forEach((d, i) => {
+    const p = (t - CLINK) / 1.2;
+    if (p <= 0 || p >= 1) { set(d, { o: 0 }); return }
+    const ang = -Math.PI / 2 + (hash(i + 30) - .5) * 2.4, v = 250 + hash(i + 40) * 420;
+    set(d, { o: 1 - p, x: Math.cos(ang) * v * eOut(p), y: Math.sin(ang) * v * eOut(p) + 500 * p * p });
+  });
+  const pIn = popIn(t, CLINK + .02, .25, 3); set(prost, { o: pIn.o, s: pIn.s * (1 + .05 * beatP), r: -3 });
+  const bIn = popIn(t, s.s + .9, .3, 1.8); set(btn, { o: bIn.o * (1 - lin(t, CLINK - .1, CLINK)), s: bIn.s * (1 + .05 * beatP) });
+  pretz.forEach((d, i) => {
+    const t0 = s.s + .2 + hash(i + 70) * 1.8, p = (t - t0) / 2.4;
+    if (p <= 0 || p >= 1) { set(d, { o: 0 }); return }
+    set(d, { o: 1, y: p * 2150, x: Math.sin(t * 2 + i) * 40, r: (hash(i) - .5) * 720 * p });
+  });
+}
+
+// ---------- HOOK render ----------
+function renderHook(t) {
+  const on = inW(t, "hook");
+  if (!on) { hide([hSmall, hBig, hQ, ...hEmo]); return }
+  const s = S.hook, out = outAt(t, W.hook[1] - .25);
+  const sm = upIn(t, s.s - .05, .3); set(hSmall, { ...sm, o: sm.o * out });
+  const bT = s.s + s.vs + (s.ve - s.vs) * .3, bIn = popIn(t, bT, .25, 3.2);
+  set(hBig, { o: bIn.o * out, s: bIn.s });
+  const qT = s.s + s.vs + (s.ve - s.vs) * .62, qIn = lin(t, qT, qT + .3);
+  set(hQ, { o: clamp(qIn * 3) * out, x: mix(1100, 0, eOut(qIn)), r: -2 });
+  hEmo.forEach((d, i) => {
+    const t0 = s.s + .15 + i * .22, p = lin(t, t0, t0 + .45);
+    const tx = (i - 2.5) * 175, ty = (i % 2) * 120;
+    set(d, { o: p > 0 ? out : 0, x: mix((i < 3 ? -1 : 1) * 900, tx, eOut(p)), y: ty + Math.sin(t * 5 + i) * 18, r: mix(i % 2 ? 180 : -180, 0, eOut(p)) + Math.sin(t * 4 + i) * 8, s: mix(.3, 1, eBack(p)) });
+  });
+}
+
+// ---------- captions ----------
+const WORDS = [];
+const HL = /^(really|costs|oktoberfest|three|maß|fourteen|hundred|brezn|fifty|hendl|seven|schweinshaxe|thirteen|almonds|five|total|four|thousand|single|day|burn|run|kilometers|marathon|protein|smashed|haxe|150|wiesn|pumpy|ai|prost)$/i;
+TL.segs.forEach(s => {
+  const ws = s.text.split(/\s+/);
+  const wt = ws.map(w => Math.max(1, (w.replace(/[^a-zß0-9]/gi, "").match(/[aeiouyä]+/gi) || [1]).length) + .6 + (/[,:]$/.test(w) ? 1.3 : /[.!?]$/.test(w) ? 2 : 0));
+  const tot = wt.reduce((a, b) => a + b, 0); let acc = 0; const span = s.ve - s.vs;
+  ws.forEach((w, i) => { WORDS.push({ w, t: s.s + s.vs + span * acc / tot, seg: s.id }); acc += wt[i] });
+});
+const GROUPS = []; let cur = [];
+WORDS.forEach((w, i) => { cur.push(w); const n = WORDS[i + 1]; if (cur.length >= 3 || /[.!?,:]$/.test(w.w) || !n || n.seg !== w.seg) { GROUPS.push(cur); cur = [] } });
+let lastG = -1;
+function renderCap(t) {
+  let gi = -1; for (let i = 0; i < GROUPS.length; i++) if (GROUPS[i][0].t <= t + .02) gi = i;
+  const cap = $("cap");
+  if (gi < 0 || t > S[GROUPS[gi][0].seg].e + .15) { cap.innerHTML = ""; lastG = -1; return }
+  const G = GROUPS[gi];
+  if (gi !== lastG) { cap.innerHTML = G.map(w => `<span>${w.w.replace(/[<>&]/g, "")}</span>`).join(""); lastG = gi }
+  [...cap.children].forEach((sp, i) => {
+    const w = G[i], p = lin(t, w.t - .02, w.t + .12), active = t >= w.t && (i === G.length - 1 || t < G[i + 1].t);
+    sp.style.opacity = p > 0 ? 1 : 0;
+    sp.style.transform = `scale(${p > 0 ? mix(1.35, active ? 1.03 : 1, eOut(p)) : .6})`;
+    sp.style.color = HL.test(w.w.replace(/[^a-zß0-9]/gi, "")) ? "#ffd23f" : "#fff";
+  });
+}
+
+// ---------- background ----------
+function renderBg(t) {
+  const beat = 60 / TL.bpm, bp = Math.exp(-((((t - TL.beat0) % beat) + beat) % beat) * 9);
+  $("rauten").style.transform = `rotate(0deg) translate(${(t * 40) % 140}px,${(t * 40) % 140}px)`;
+  let col = [111, 195, 255];
+  if (t >= S.total.s && inW(t, "receipt")) col = [255, 46, 77];
+  if (inW(t, "burn")) col = [255, 159, 26];
+  if (inW(t, "twist")) col = [53, 240, 138];
+  if (inW(t, "cta")) col = [255, 210, 63];
+  $("glow").style.background = `radial-gradient(circle, rgba(${col},${.22 + .14 * bp}) 0%, rgba(${col},0) 60%)`;
+  bulbs.forEach(([id, i]) => {
+    const on = hash(i * 3 + Math.floor(t * 4 + i * .37)) > .25;
+    const c = BULBC[i % 5]; const b = $(id);
+    b.setAttribute("fill", on ? c : "#333"); b.style.filter = on ? `drop-shadow(0 0 ${8 + 10 * bp}px ${c})` : "none";
+  });
+  let fl = 0, sh = 0;
+  HITS.forEach(h => { const d = t - h; if (d >= 0 && d < .5) { fl = Math.max(fl, Math.exp(-d * 14) * .65); sh = Math.max(sh, Math.exp(-d * 9)) } });
+  $("flash").style.opacity = fl;
+  stage.style.transform = `translate(${Math.sin(t * 97) * 26 * sh}px,${Math.cos(t * 83) * 22 * sh}px) scale(${1 + .012 * bp})`;
+}
+
+window.renderAt = t => { renderBg(t); renderHook(t); renderReceipt(t); renderBurn(t); renderTwist(t); renderCta(t); renderCap(t) };
+window.ready = document.fonts.ready.then(() => { renderAt(0); return true });
+</script></body></html>
