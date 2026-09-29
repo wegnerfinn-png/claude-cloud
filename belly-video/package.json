@@ -1,0 +1,13 @@
+{
+  "name": "belly-video",
+  "private": true,
+  "type": "module",
+  "description": "Animated 9:16 short, rendered entirely from code",
+  "scripts": {
+    "render": "node render.mjs",
+    "preview": "npx --yes http-server -c-1 -p 8080 ."
+  },
+  "dependencies": {
+    "playwright": "1.56.1"
+  }
+}

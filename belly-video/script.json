@@ -1,0 +1,65 @@
+{
+  "title": "6 Foods To Avoid For Belly Fat",
+  "voice": {
+    "model": "voices/en_US-joe-medium.onnx",
+    "espeak_voice": "en-us",
+    "length_scale": 0.9,
+    "sentence_pause": 0.12,
+    "scene_gap": 0.35
+  },
+  "scenes": [
+    {
+      "id": "intro",
+      "text": "Six foods you must avoid if you want to lose belly fat.",
+      "highlight": ["six", "avoid", "belly", "fat"]
+    },
+    {
+      "id": "bread",
+      "num": 1,
+      "title": "WHITE BREAD",
+      "text": "Number one: white bread. It's made from refined flour and lacks fiber and essential nutrients. Its high glycemic index means blood sugar spikes and more fat storage.",
+      "highlight": ["white", "bread", "refined", "fiber", "spikes", "fat", "storage"]
+    },
+    {
+      "id": "beer",
+      "num": 2,
+      "title": "BEER",
+      "text": "Number two: beer. Alcohol is full of empty calories, raises your cortisol levels, and makes your body store fat right around your belly.",
+      "highlight": ["beer", "empty", "calories", "cortisol", "belly"]
+    },
+    {
+      "id": "boba",
+      "num": 3,
+      "title": "SUGARY DRINKS",
+      "text": "Number three: sugary drinks. Bubble tea and soda are loaded with sugar and empty calories, promoting weight gain and belly fat.",
+      "highlight": ["sugary", "drinks", "sugar", "empty", "weight", "gain", "belly", "fat"]
+    },
+    {
+      "id": "icecream",
+      "num": 4,
+      "title": "ICE CREAM",
+      "text": "Number four: ice cream. The combo of sugar and unhealthy fats makes it a sneaky contributor to belly fat.",
+      "highlight": ["ice", "cream", "sugar", "unhealthy", "fats", "sneaky", "belly", "fat"]
+    },
+    {
+      "id": "chips",
+      "num": 5,
+      "title": "POTATO CHIPS",
+      "text": "Number five: potato chips. They're highly processed and full of unhealthy fats and salt. A better alternative? Baked chips made from whole potatoes.",
+      "highlight": ["potato", "chips", "processed", "fats", "salt"],
+      "good": ["better", "alternative", "baked", "whole", "potatoes"]
+    },
+    {
+      "id": "rice",
+      "num": 6,
+      "title": "REFINED CARBS",
+      "text": "Number six: refined carbs, like white rice and rice cakes. They're digested super fast, causing insulin spikes and more fat storage.",
+      "highlight": ["refined", "carbs", "fast", "insulin", "spikes", "fat", "storage"]
+    },
+    {
+      "id": "outro",
+      "text": "Save this video, and follow for more health tips!",
+      "highlight": ["save", "follow"]
+    }
+  ]
+}

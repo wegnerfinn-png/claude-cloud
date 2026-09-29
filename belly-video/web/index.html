@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belly Fat Short</title>
+<style>
+  @font-face { font-family: 'Lucky'; src: url('../assets/fonts/LuckiestGuy-Regular.ttf') format('truetype'); }
+  @font-face { font-family: 'Fredoka'; src: url('../assets/fonts/Fredoka-Bold.ttf') format('truetype'); }
+  :root { --bg: #14111c; --fg: #f3f0fa; --muted: #9a93ad; --accent: #ffd23f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px/1.4 system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px 16px; }
+  #stage { height: min(82vh, 1920px); aspect-ratio: 9 / 16; max-width: 100%; background: #000; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  .bar { display: flex; align-items: center; gap: 10px; width: min(460px, 100%); }
+  button { background: var(--accent); color: #221733; border: 0; border-radius: 999px; padding: 8px 18px; font-weight: 700; cursor: pointer; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  #time { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 88px; text-align: right; }
+  body.render { padding: 0; display: block; }
+  body.render .bar { display: none; }
+  body.render #stage { height: auto; width: 1080px; border-radius: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<div class="bar">
+  <button id="play">Play</button>
+  <input id="seek" type="range" min="0" max="1" step="0.001" value="0">
+  <span id="time">0.0s</span>
+</div>
+<audio id="audio" preload="auto"></audio>
+<script type="module">
+  import { init, renderFrame, getCues } from './main.js';
+
+  const params = new URLSearchParams(location.search);
+  if (params.has('render')) document.body.classList.add('render');
+
+  const TL = await init();
+  window.renderFrame = renderFrame;
+  window.getCues = getCues;
+  window.timeline = TL;
+  window.ready = true;
+
+  const audio = document.getElementById('audio');
+  const seek = document.getElementById('seek');
+  const time = document.getElementById('time');
+  const play = document.getElementById('play');
+  seek.max = TL.duration;
+
+  // Prefer the full mix (music + sfx) if mix.py has run, else the plain voice.
+  for (const src of ['../build/mix.wav', '../build/voice.wav']) {
+    const ok = await fetch(src, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+    if (ok) { audio.src = src; break; }
+  }
+
+  let T = parseFloat(params.get('t') || '0');
+  const draw = () => {
+    renderFrame(T);
+    seek.value = T;
+    time.textContent = `${T.toFixed(1)}s / ${TL.duration.toFixed(1)}s`;
+  };
+  draw();
+
+  play.onclick = () => {
+    if (audio.paused) { audio.currentTime = T >= TL.duration - 0.05 ? 0 : T; audio.play(); play.textContent = 'Pause'; }
+    else { audio.pause(); play.textContent = 'Play'; }
+  };
+  seek.oninput = () => { T = +seek.value; audio.currentTime = T; draw(); };
+  audio.onended = () => { play.textContent = 'Play'; };
+  const loop = () => {
+    if (!audio.paused) { T = audio.currentTime; draw(); }
+    requestAnimationFrame(loop);
+  };
+  if (!params.has('render')) loop();
+</script>
+</body>
+</html>
