@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pumpy Pizza Ad</title>
+<style>
+  @font-face { font-family: 'Inter'; src: url(assets/fonts/Inter-latin.woff2) format('woff2'); font-weight: 100 900; }
+  :root { --bg: #111; --fg: #eee; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: Inter, system-ui, sans-serif; }
+  body.render { background: #000; }
+  #stage { display: block; width: 1080px; height: 1920px; }
+  body:not(.render) #stage { width: min(100vw, calc((100vh - 64px) * 9 / 16)); height: auto; aspect-ratio: 9 / 16; margin: 0 auto; }
+  #bar { display: flex; gap: 10px; align-items: center; padding: 10px 16px; height: 44px; box-sizing: border-box; max-width: 720px; margin: 0 auto; }
+  body.render #bar { display: none; }
+  #bar button { font: 600 14px Inter, sans-serif; padding: 6px 14px; border-radius: 6px; border: 0; background: #2e54ff; color: #fff; cursor: pointer; }
+  #bar input { flex: 1; }
+  #bar span { font: 500 13px Inter, sans-serif; font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<div id="bar"><button id="play">Play</button><input id="scrub" type="range" min="0" max="1000" value="0"><span id="time">0.00 s</span></div>
+<script src="src/config.js"></script>
+<script src="src/noise.js"></script>
+<script src="src/textures.js"></script>
+<script src="src/props.js"></script>
+<script src="src/sticker.js"></script>
+<script src="src/phone.js"></script>
+<script src="src/timeline.js"></script>
+<script src="src/scene.js"></script>
+</body>
+</html>

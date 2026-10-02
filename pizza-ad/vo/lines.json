@@ -1,0 +1,128 @@
+[
+  {
+    "file": "01-hook.wav",
+    "text": "Let's say this pizza is everything you eat in a day.",
+    "say": "Let's say this pizza is everything you eat in a day.",
+    "slot": 3.4
+  },
+  {
+    "file": "02-oil.wav",
+    "text": "A thin slice is the oil in your pan.",
+    "say": "A thin slice is the oil in your pan.",
+    "slot": 3.3
+  },
+  {
+    "file": "03-latte.wav",
+    "text": "Then your latte,",
+    "say": "Then your latte,",
+    "slot": 2.1
+  },
+  {
+    "file": "04-nuts.wav",
+    "text": "a handful of nuts,",
+    "say": "a handful of nuts,",
+    "slot": 2
+  },
+  {
+    "file": "05-bites.wav",
+    "text": "and the bites while cooking.",
+    "say": "and the bites while cooking.",
+    "slot": 2.4
+  },
+  {
+    "file": "06-breakfast.wav",
+    "text": "Then breakfast,",
+    "say": "Then breakfast,",
+    "slot": 1.9
+  },
+  {
+    "file": "07-lunch.wav",
+    "text": "lunch,",
+    "say": "lunch,",
+    "slot": 1.6
+  },
+  {
+    "file": "08-dinner.wav",
+    "text": "and dinner.",
+    "say": "and dinner.",
+    "slot": 1.8
+  },
+  {
+    "file": "09-log.wav",
+    "text": "You log all three meals.",
+    "say": "You log all three meals.",
+    "slot": 2.6
+  },
+  {
+    "file": "10-sum.wav",
+    "text": "1,850 kcal. Under your 2,200 budget.",
+    "say": "1,850 calories. Under your 2,200 budget.",
+    "slot": 3
+  },
+  {
+    "file": "11-why.wav",
+    "text": "So why isn't the scale moving?",
+    "say": "So why isn't the scale moving?",
+    "slot": 2.4
+  },
+  {
+    "file": "12-tiny.wav",
+    "text": "Because these tiny slices",
+    "say": "Because these tiny slices",
+    "slot": 2.3
+  },
+  {
+    "file": "13-mystery.wav",
+    "text": "add up to...",
+    "say": "add up to...",
+    "slot": 2.8
+  },
+  {
+    "file": "14-reveal.wav",
+    "text": "650 kcal. Every single day.",
+    "say": "650 calories. Every single day.",
+    "slot": 2.6
+  },
+  {
+    "file": "15-kcal.wav",
+    "text": "26% of what you eat, never tracked.",
+    "say": "26 percent of what you eat, never tracked.",
+    "slot": 2.6
+  },
+  {
+    "file": "16-deficit.wav",
+    "text": "And that's the part eating your deficit.",
+    "say": "And that's the part eating your deficit.",
+    "slot": 2.8
+  },
+  {
+    "file": "17-stop.wav",
+    "text": "You don't have to stop eating them.",
+    "say": "You don't have to stop eating them.",
+    "slot": 2.4
+  },
+  {
+    "file": "18-see.wav",
+    "text": "You just have to see them.",
+    "say": "You just have to see them.",
+    "slot": 2
+  },
+  {
+    "file": "19-built.wav",
+    "text": "That's why we built Pumpy.",
+    "say": "That's why we built Pumpy.",
+    "slot": 2.4
+  },
+  {
+    "file": "20-scan.wav",
+    "text": "Snap your plate, it counts every slice.",
+    "say": "Snap your plate, it counts every slice.",
+    "slot": 3.6
+  },
+  {
+    "file": "21-cta.wav",
+    "text": "Download Pumpy AI.",
+    "say": "Download Pumpy AI.",
+    "slot": 2.9
+  }
+]
